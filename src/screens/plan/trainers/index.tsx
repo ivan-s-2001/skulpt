@@ -265,8 +265,17 @@ const TrainersScreen: FC = () => {
                 text: 'Удалить',
                 style: 'destructive',
                 onPress: async () => {
-                    await deleteTrainer.mutateAsync(selected.id);
-                    setSelectedId(null);
+                    try {
+                        await deleteTrainer.mutateAsync(selected.id);
+                        setSelectedId(null);
+                    } catch (error) {
+                        Alert.alert(
+                            'Не удалось удалить',
+                            error instanceof Error
+                                ? error.message
+                                : 'Тренер уже используется в истории.',
+                        );
+                    }
                 },
             },
         ]);
