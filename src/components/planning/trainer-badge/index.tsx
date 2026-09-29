@@ -35,12 +35,12 @@ export const TrainerBadge: FC<TrainerBadgeProps> = ({
     name,
     color,
     onAccent = false,
-    prefix = 'С',
+    prefix = 'Тренер ·',
 }) => (
     <HStack style={styles.container}>
         <Box style={styles.dot(color)} />
         <Text style={styles.label(onAccent)}>
-            {prefix} {name}
+            {prefix ? `${prefix} ${name}` : name}
         </Text>
     </HStack>
 );
