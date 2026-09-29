@@ -13,8 +13,10 @@ import { Input } from '@/components/primitives/input';
 import { Button } from '@/components/buttons/base';
 import { Label } from '@/components/forms/label';
 import {
+    useActiveSubscription,
     useCreateTrainer,
     useDeleteTrainer,
+    useRebuildSubscriptionPlan,
     useTrainers,
     useUpdateTrainer,
 } from '@/hooks/use-planning';
@@ -128,9 +130,11 @@ const styles = StyleSheet.create((theme, rt) => ({
 const TrainersScreen: FC = () => {
     const { theme } = useUnistyles();
     const { data: trainers = [] } = useTrainers();
+    const { data: activeSubscription } = useActiveSubscription();
     const createTrainer = useCreateTrainer();
     const updateTrainer = useUpdateTrainer();
     const deleteTrainer = useDeleteTrainer();
+    const rebuildSubscription = useRebuildSubscriptionPlan();
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [day, setDay] = useState(1);
@@ -173,6 +177,10 @@ const TrainersScreen: FC = () => {
 
     const save = async () => {
         if (!selected) return;
+
+        const scheduleChanged =
+            JSON.stringify(schedule) !== JSON.stringify(selected.schedule);
+
         await updateTrainer.mutateAsync({
             id: selected.id,
             input: {
@@ -181,6 +189,51 @@ const TrainersScreen: FC = () => {
                 schedule,
             },
         });
+
+        const affectsActiveSubscription =
+            scheduleChanged &&
+            activeSubscription?.trainer?.id === selected.id;
+
+        if (!affectsActiveSubscription || !activeSubscription) {
+            Alert.alert('Сохранено', 'Данные тренера обновлены.');
+            return;
+        }
+
+        Alert.alert(
+            'Расписание тренера изменено',
+            'Перестроить будущие занятия активного абонемента?',
+            [
+                {
+                    text: 'Позже',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Перестроить',
+                    onPress: async () => {
+                        const result = await rebuildSubscription.mutateAsync(
+                            activeSubscription.subscription.id,
+                        );
+
+                        if (result.reason === 'replanned') {
+                            Alert.alert(
+                                'Расписание обновлено',
+                                'Будущие занятия перестроены.',
+                            );
+                        } else if (result.reason === 'no_full_plan') {
+                            Alert.alert(
+                                'Текущий план сохранён',
+                                'Полный новый вариант пока не помещается в доступные даты.',
+                            );
+                        } else {
+                            Alert.alert(
+                                'Расписание актуально',
+                                'Будущие занятия уже подходят под новое расписание тренера.',
+                            );
+                        }
+                    },
+                },
+            ],
+        );
     };
 
     const addSlot = () => {
