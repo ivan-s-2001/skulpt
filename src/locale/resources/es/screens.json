@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "Inicio",
+        "title": "Agenda",
         "planned": "Entrenamientos programados",
         "workoutsCount_one": "{{count}} entrenamiento",
         "workoutsCount_other": "{{count}} entrenamientos",
