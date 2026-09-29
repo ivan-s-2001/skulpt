@@ -64,10 +64,16 @@ const summarizeBatchData = (batchData: SyncBatchRequest) =>
                 deleted: changes.deleted.length,
                 sampleCreatedIds: changes.created
                     .slice(0, 2)
-                    .map((record) => String((record as Record<string, unknown>).id ?? '')),
+                    .map((record) => {
+                        const value = record as Record<string, unknown>;
+                        return String(value.id ?? value.userId ?? '');
+                    }),
                 sampleUpdatedIds: changes.updated
                     .slice(0, 2)
-                    .map((record) => String((record as Record<string, unknown>).id ?? '')),
+                    .map((record) => {
+                        const value = record as Record<string, unknown>;
+                        return String(value.id ?? value.userId ?? '');
+                    }),
                 sampleUpdatedKeys:
                     changes.updated.length > 0
                         ? Object.keys(changes.updated[0] as Record<string, unknown>).sort()
@@ -257,6 +263,23 @@ export const normalizeOutgoingExerciseSetSyncRecord = (
     return normalized;
 };
 
+export const normalizeOutgoingWorkScheduleSyncRecord = (
+    record: Record<string, unknown>,
+): Record<string, unknown> => {
+    const normalized = { ...record };
+
+    if (
+        (typeof normalized.userId !== 'string' || normalized.userId.length === 0) &&
+        typeof normalized.id === 'string' &&
+        normalized.id.length > 0
+    ) {
+        normalized.userId = normalized.id;
+    }
+
+    delete normalized.id;
+    return normalized;
+};
+
 export const normalizeIncomingExerciseSyncRecord = (
     record: Record<string, unknown>,
 ): Record<string, unknown> => {
@@ -303,6 +326,10 @@ const normalizeSyncRecordForPush = (
 
     if (tableName === 'exercise_set') {
         return normalizeOutgoingExerciseSetSyncRecord(record);
+    }
+
+    if (tableName === 'work_schedule') {
+        return normalizeOutgoingWorkScheduleSyncRecord(record);
     }
 
     return record;
