@@ -25,7 +25,7 @@ import {
 } from '@/hooks/use-planning';
 import { useWorkouts } from '@/hooks/use-workouts';
 import { buildTrainerPlans } from '@/helpers/trainer-planner';
-import { TrainerBadge } from '@/components/planning/trainer-badge';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 const styles = StyleSheet.create((theme, rt) => ({
     container: {
