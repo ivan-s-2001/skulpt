@@ -40,10 +40,8 @@ import { AudioProvider } from '@/hooks/use-audio';
 
 export { ErrorBoundary } from 'expo-router';
 
-// Set initial dayjs locale
 dayjs.locale(i18n.language);
 
-// Listen for language changes and update dayjs locale
 i18n.on('languageChanged', (lng) => {
     dayjs.locale(lng);
 });
@@ -95,6 +93,7 @@ const App: FC = () => {
                             <Stack.Screen name="(tabs)" />
                             <Stack.Screen name="workout" />
                             <Stack.Screen name="settings" />
+                            <Stack.Screen name="plan" />
                             <Stack.Screen
                                 name="editor"
                                 options={{
