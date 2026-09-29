@@ -15,7 +15,7 @@ const Editor: FC = () => {
         case 'exercise__edit':
             return <ExerciseEditor {...state.payload} />;
         case 'workout__create':
-            return <WorkoutEditor />;
+            return <WorkoutEditor initialStartAt={state.payload?.startAt} />;
         case 'workout__edit':
             return <WorkoutEditor {...state.payload} />;
         case 'measurement__create':
