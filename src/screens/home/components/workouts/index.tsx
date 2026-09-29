@@ -3,13 +3,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
+import dayjs from 'dayjs';
 
 import { Box } from '@/components/primitives/box';
 import { Text } from '@/components/primitives/text';
 import { WorkoutSelect } from '@/db/schema';
 import { VStack } from '@/components/primitives/vstack';
-import { HStack } from '@/components/primitives/hstack';
-import { WorkoutGroup } from '@/helpers/workouts';
 import { useRunningWorkoutStatic, useRunningWorkoutTicker } from '@/hooks/use-running-workout';
 import type { WorkoutOverviewMetaMap } from '@/hooks/use-workouts';
 import { Pushes } from '@/components/promo/pushes';
@@ -18,43 +17,43 @@ import { WorkoutCard } from '../workout-card';
 import { Header } from '../header';
 import { WeekStats } from '../week';
 
-type WorkoutSectionType = 'in_progress' | 'planned' | 'completed';
-
-type CardItem = {
-    type: 'card';
-    key: string;
-    workout: WorkoutSelect;
-    section: WorkoutSectionType;
-    isFirstInSection: boolean;
-};
-
-type PlannedHeaderItem = {
-    type: 'planned_header';
-    key: string;
-    title: string;
-    hasTopSpacing: boolean;
-};
-
-type CompletedHeaderItem = {
-    type: 'completed_header';
-    key: string;
-    title: string;
-    workoutsCount: number;
-    hasTopSpacing: boolean;
-};
-
-type WorkoutsListItem = CardItem | PlannedHeaderItem | CompletedHeaderItem;
-
-const COMPLETED_WEEKS_PAGE_SIZE = 5;
-
 interface WorkoutsProps {
     workouts: WorkoutSelect[];
     firstWeekday: number;
-    inProgressWorkouts: WorkoutSelect[];
-    plannedWorkouts: WorkoutSelect[];
-    completedGroups: WorkoutGroup[];
     workoutsOverviewMeta: WorkoutOverviewMetaMap;
 }
+
+const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
+    const date =
+        workout.status === 'planned'
+            ? workout.startAt
+            : workout.status === 'completed'
+              ? workout.completedAt
+              : workout.startedAt ?? workout.startAt;
+
+    if (!date) return null;
+
+    const parsed = dayjs(date);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
+};
+
+const getWorkoutTimestamp = (workout: WorkoutSelect): number => {
+    const date =
+        workout.status === 'planned'
+            ? workout.startAt
+            : workout.status === 'completed'
+              ? workout.completedAt
+              : workout.startedAt ?? workout.startAt ?? workout.createdAt;
+
+    return date ? new Date(date).getTime() : 0;
+};
+
+const statusOrder: Record<WorkoutSelect['status'], number> = {
+    in_progress: 0,
+    planned: 1,
+    completed: 2,
+    cancelled: 3,
+};
 
 const styles = StyleSheet.create((theme, rt) => ({
     listContainer: {
@@ -66,76 +65,75 @@ const styles = StyleSheet.create((theme, rt) => ({
     },
     headerContent: {
         gap: theme.space(5),
-        paddingBottom: theme.space(5),
+        paddingBottom: theme.space(4),
     },
-    sectionHeaderContainer: (hasTopSpacing: boolean) => ({
+    selectedDayContainer: {
         paddingHorizontal: theme.space(4),
-        marginTop: hasTopSpacing ? theme.space(6) : 0,
-    }),
-    sectionHeader: {
+        gap: theme.space(1),
+    },
+    selectedDayTitle: {
         fontSize: theme.fontSize.xl.fontSize,
         fontWeight: theme.fontWeight.bold.fontWeight,
         color: theme.colors.typography,
+        textTransform: 'capitalize',
     },
-    completedHeaderContainer: (hasTopSpacing: boolean) => ({
-        marginTop: hasTopSpacing ? theme.space(6) : 0,
-        gap: theme.space(3),
-    }),
-    workoutsStatsContainer: {
-        paddingHorizontal: theme.space(4),
-    },
-    workoutsCountContainer: {
-        backgroundColor: theme.colors.foreground,
-        paddingHorizontal: theme.space(3),
-        paddingVertical: theme.space(1),
-        borderRadius: theme.radius.full,
-    },
-    workoutsCount: {
+    selectedDaySubtitle: {
         fontSize: theme.fontSize.sm.fontSize,
         color: theme.colors.typography,
-        fontWeight: theme.fontWeight.medium.fontWeight,
+        opacity: 0.5,
     },
-    cardContainer: (isFirstInSection: boolean, section: WorkoutSectionType) => ({
+    cardContainer: {
         paddingHorizontal: theme.space(4),
-        marginTop: isFirstInSection
-            ? section === 'in_progress'
-                ? 0
-                : theme.space(3)
-            : theme.space(2),
-    }),
+        marginTop: theme.space(2),
+    },
+    emptyContainer: {
+        paddingHorizontal: theme.space(8),
+        paddingVertical: theme.space(12),
+        alignItems: 'center',
+        gap: theme.space(2),
+    },
+    emptyTitle: {
+        fontSize: theme.fontSize.lg.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+        color: theme.colors.typography,
+        textAlign: 'center',
+    },
+    emptyDescription: {
+        fontSize: theme.fontSize.sm.fontSize,
+        color: theme.colors.typography,
+        opacity: 0.5,
+        textAlign: 'center',
+    },
+    footer: {
+        paddingTop: theme.space(6),
+    },
 }));
 
 export const Workouts: FC<WorkoutsProps> = ({
     workouts,
     firstWeekday,
-    inProgressWorkouts,
-    plannedWorkouts,
-    completedGroups,
     workoutsOverviewMeta,
 }) => {
-    const { t } = useTranslation(['screens']);
+    const { t, i18n } = useTranslation(['screens']);
     const router = useRouter();
     const { runningWorkout } = useRunningWorkoutStatic();
     const { elapsedFormated } = useRunningWorkoutTicker();
-    const completedGroupsKey = useMemo(
-        () => completedGroups.map((group) => `${group.id}:${group.workouts.length}`).join('|'),
-        [completedGroups],
-    );
-    const [visibleCompletedWeeksState, setVisibleCompletedWeeksState] = useState({
-        key: completedGroupsKey,
-        count: COMPLETED_WEEKS_PAGE_SIZE,
-    });
+    const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
 
-    const visibleCompletedWeeksCount =
-        visibleCompletedWeeksState.key === completedGroupsKey
-            ? visibleCompletedWeeksState.count
-            : COMPLETED_WEEKS_PAGE_SIZE;
-
-    const visibleCompletedGroups = useMemo(
-        () => completedGroups.slice(0, visibleCompletedWeeksCount),
-        [completedGroups, visibleCompletedWeeksCount],
+    const selectedWorkouts = useMemo(
+        () =>
+            workouts
+                .filter((workout) => {
+                    if (workout.status === 'cancelled') return false;
+                    return getWorkoutDateKey(workout) === selectedDate;
+                })
+                .sort((a, b) => {
+                    const statusDelta = statusOrder[a.status] - statusOrder[b.status];
+                    if (statusDelta !== 0) return statusDelta;
+                    return getWorkoutTimestamp(a) - getWorkoutTimestamp(b);
+                }),
+        [selectedDate, workouts],
     );
-    const hasMoreCompletedWeeks = visibleCompletedWeeksCount < completedGroups.length;
 
     const handleWorkoutPress = useCallback(
         (workoutId: string) => {
@@ -144,152 +142,103 @@ export const Workouts: FC<WorkoutsProps> = ({
         [router],
     );
 
-    const handleEndReached = useCallback(() => {
-        if (!hasMoreCompletedWeeks) {
-            return;
+    const selectedDayTitle = useMemo(() => {
+        const date = dayjs(selectedDate).locale(i18n.language);
+        const today = dayjs().format('YYYY-MM-DD');
+
+        if (selectedDate === today) {
+            return t('today', { ns: 'common', defaultValue: 'Сегодня' });
         }
 
-        setVisibleCompletedWeeksState((prev) => ({
-            key: completedGroupsKey,
-            count: Math.min(
-                (prev.key === completedGroupsKey ? prev.count : COMPLETED_WEEKS_PAGE_SIZE) +
-                    COMPLETED_WEEKS_PAGE_SIZE,
-                completedGroups.length,
-            ),
-        }));
-    }, [completedGroups.length, completedGroupsKey, hasMoreCompletedWeeks]);
+        return date.format('dddd, D MMMM');
+    }, [i18n.language, selectedDate, t]);
 
-    const listItems = useMemo<WorkoutsListItem[]>(() => {
-        const items: WorkoutsListItem[] = [];
-
-        if (inProgressWorkouts.length > 0) {
-            inProgressWorkouts.forEach((workout, index) => {
-                items.push({
-                    type: 'card',
-                    key: `in-progress-card-${workout.id}`,
-                    workout,
-                    section: 'in_progress',
-                    isFirstInSection: index === 0,
-                });
-            });
-        }
-
-        if (plannedWorkouts.length > 0) {
-            items.push({
-                type: 'planned_header',
-                key: 'planned-header',
-                title: t('home.planned', { ns: 'screens' }),
-                hasTopSpacing: items.length > 0,
-            });
-
-            plannedWorkouts.forEach((workout, index) => {
-                items.push({
-                    type: 'card',
-                    key: `planned-card-${workout.id}`,
-                    workout,
-                    section: 'planned',
-                    isFirstInSection: index === 0,
-                });
-            });
-        }
-
-        visibleCompletedGroups.forEach((group) => {
-            items.push({
-                type: 'completed_header',
-                key: `completed-header-${group.id}`,
-                title: group.title,
-                workoutsCount: group.workouts.length,
-                hasTopSpacing: items.length > 0,
-            });
-
-            group.workouts.forEach((workout, index) => {
-                items.push({
-                    type: 'card',
-                    key: `completed-card-${group.id}-${workout.id}`,
-                    workout,
-                    section: 'completed',
-                    isFirstInSection: index === 0,
-                });
-            });
-        });
-
-        return items;
-    }, [inProgressWorkouts, plannedWorkouts, visibleCompletedGroups, t]);
+    const selectedDaySubtitle = useMemo(() => {
+        const count = selectedWorkouts.length;
+        if (count === 0) return 'Тренировок нет';
+        return `${count} ${count === 1 ? 'тренировка' : count < 5 ? 'тренировки' : 'тренировок'}`;
+    }, [selectedWorkouts.length]);
 
     const renderHeader = useCallback(
         () => (
             <VStack style={styles.headerContent}>
                 <Header />
-                <WeekStats workouts={workouts} firstWeekday={firstWeekday} />
-                <Pushes />
+                <WeekStats
+                    workouts={workouts}
+                    firstWeekday={firstWeekday}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                />
+                <VStack style={styles.selectedDayContainer}>
+                    <Text style={styles.selectedDayTitle}>{selectedDayTitle}</Text>
+                    <Text style={styles.selectedDaySubtitle}>{selectedDaySubtitle}</Text>
+                </VStack>
             </VStack>
         ),
-        [firstWeekday, workouts],
+        [
+            firstWeekday,
+            selectedDate,
+            selectedDaySubtitle,
+            selectedDayTitle,
+            workouts,
+        ],
     );
 
-    const renderItem = useCallback(
-        ({ item }: { item: WorkoutsListItem }) => {
-            if (item.type === 'planned_header') {
-                return (
-                    <Box style={styles.sectionHeaderContainer(item.hasTopSpacing)}>
-                        <Text style={styles.sectionHeader}>{item.title}</Text>
-                    </Box>
-                );
-            }
-
-            if (item.type === 'completed_header') {
-                return (
-                    <VStack style={styles.completedHeaderContainer(item.hasTopSpacing)}>
-                        <Box style={styles.sectionHeaderContainer(false)}>
-                            <Text style={styles.sectionHeader}>{item.title}</Text>
-                        </Box>
-                        <HStack style={styles.workoutsStatsContainer}>
-                            <Box style={styles.workoutsCountContainer}>
-                                <Text style={styles.workoutsCount}>
-                                    {t('home.workoutsCount', {
-                                        ns: 'screens',
-                                        count: item.workoutsCount,
-                                    })}
-                                </Text>
-                            </Box>
-                        </HStack>
-                    </VStack>
-                );
-            }
-
+    const renderWorkout = useCallback(
+        ({ item }: { item: WorkoutSelect }) => {
             const activeElapsedFormatted =
-                item.section === 'in_progress' && item.workout.id === runningWorkout?.id
+                item.status === 'in_progress' && item.id === runningWorkout?.id
                     ? elapsedFormated
                     : null;
 
             return (
-                <Box style={styles.cardContainer(item.isFirstInSection, item.section)}>
+                <Box style={styles.cardContainer}>
                     <WorkoutCard
-                        workout={item.workout}
+                        workout={item}
                         onPress={handleWorkoutPress}
                         activeElapsedFormatted={activeElapsedFormatted}
-                        overviewMeta={workoutsOverviewMeta[item.workout.id]}
+                        overviewMeta={workoutsOverviewMeta[item.id]}
                     />
                 </Box>
             );
         },
-        [elapsedFormated, handleWorkoutPress, runningWorkout?.id, t, workoutsOverviewMeta],
+        [elapsedFormated, handleWorkoutPress, runningWorkout?.id, workoutsOverviewMeta],
+    );
+
+    const renderEmpty = useCallback(
+        () => (
+            <VStack style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>Свободный день</Text>
+                <Text style={styles.emptyDescription}>
+                    Здесь появятся соло-тренировки и занятия с тренером на выбранную дату.
+                </Text>
+            </VStack>
+        ),
+        [],
+    );
+
+    const renderFooter = useCallback(
+        () => (
+            <Box style={styles.footer}>
+                <Pushes />
+            </Box>
+        ),
+        [],
     );
 
     return (
         <FlashList
-            data={listItems}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.key}
-            getItemType={(item) => item.type}
+            data={selectedWorkouts}
+            renderItem={renderWorkout}
+            keyExtractor={(item) => item.id}
             drawDistance={320}
             ListHeaderComponent={renderHeader}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
             contentContainerStyle={styles.listContent}
             style={styles.listContainer}
             showsVerticalScrollIndicator={false}
-            extraData={`${runningWorkout?.id || ''}:${elapsedFormated}`}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.15}
+            extraData={`${selectedDate}:${runningWorkout?.id || ''}:${elapsedFormated}`}
         />
     );
 };
