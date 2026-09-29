@@ -384,7 +384,7 @@ export const useCompleteWorkout = () => {
             invalidateWorkoutSetDerivedQueries(queryClient);
 
             if (!result.didComplete) return;
-            markSubscriptionSessionAttendedByWorkout(data.id)
+            markSubscriptionWorkoutAttendedByWorkout(data.id)
                 .then(() => queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] }))
                 .catch(() => undefined);
             const diagnosticProperties = {
