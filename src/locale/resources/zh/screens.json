@@ -456,5 +456,21 @@
             "zone4": "区间 4 — 峰值",
             "zone5": "区间 5 — 极限"
         }
+    },
+    "plan": {
+        "title": "计划",
+        "subscription": {
+            "section": "课包",
+            "title": "跟教练训练",
+            "emptyDescription": "课包激活后，未来课程会一直完整地排入计划。",
+            "action": "规划课包"
+        },
+        "solo": {
+            "section": "额外自主训练",
+            "add": "添加",
+            "emptyTitle": "暂无自主训练",
+            "emptyDescription": "可以叠加在课包计划之上，不会减少剩余教练课程。"
+        },
+        "note": "自主训练只是补充。课包进度只计算与所选教练完成的课程。"
     }
 }
