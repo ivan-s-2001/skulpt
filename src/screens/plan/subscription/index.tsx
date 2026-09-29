@@ -416,7 +416,7 @@ const SubscriptionScreen: FC = () => {
                 <Button
                     type="link"
                     title="Тренеры"
-                    onPress={() => router.navigate('/plan/trainers' as any)}
+                    onPress={() => router.navigate('/subscription-settings/trainers' as any)}
                 />
             </ScrollView>
         );
@@ -479,7 +479,7 @@ const SubscriptionScreen: FC = () => {
                             type="link"
                             size="sm"
                             title={trainers.length ? `${trainers.length}` : 'Добавить'}
-                            onPress={() => router.navigate('/plan/trainers' as any)}
+                            onPress={() => router.navigate('/subscription-settings/trainers' as any)}
                         />
                     </HStack>
                 </VStack>
