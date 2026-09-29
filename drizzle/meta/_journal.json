@@ -148,6 +148,13 @@
             "when": 1783322351654,
             "tag": "0020_blue_lady_ursula",
             "breakpoints": true
+        },
+        {
+            "idx": 21,
+            "version": "6",
+            "when": 1786132800000,
+            "tag": "0021_training_plan",
+            "breakpoints": true
         }
     ]
 }
