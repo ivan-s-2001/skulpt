@@ -1,4 +1,3 @@
-import React from 'react';
 
 import { Stack } from '@/navigators/stack';
 import { useUnistyles } from 'react-native-unistyles';
