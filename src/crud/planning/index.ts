@@ -461,6 +461,90 @@ export const ensureSubscriptionPlanned = async (
     return await getActiveSubscription();
 };
 
+export const rebuildFutureSubscriptionPlan = async (
+    subscriptionId: string,
+): Promise<ActiveSubscriptionModel | null> => {
+    const user = await getCurrentUser();
+    if (!user) return null;
+
+    const [rows, schedule, allWorkouts] = await Promise.all([
+        db.select().from(subscription).where(eq(subscription.id, subscriptionId)).limit(1),
+        getWorkSchedule(),
+        getWorkouts(),
+    ]);
+
+    const current = rows[0];
+    if (!current || current.status !== 'active') return null;
+
+    const [trainerRow] = await db
+        .select()
+        .from(trainer)
+        .where(eq(trainer.id, current.trainerId))
+        .limit(1);
+    if (!trainerRow) return null;
+
+    const trainerModel = hydrateTrainer(trainerRow);
+    const own = allWorkouts.filter((item) => item.subscriptionId === subscriptionId);
+
+    const attended = own.filter(
+        (item) => item.attendance === 'attended' || item.status === 'completed',
+    ).length;
+
+    const inProgress = own.filter(
+        (item) =>
+            item.attendance !== 'missed' &&
+            item.status === 'in_progress',
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const futurePlanned = own.filter(
+        (item) =>
+            item.attendance !== 'missed' &&
+            item.status === 'planned' &&
+            item.startAt != null &&
+            new Date(item.startAt).getTime() >= today.getTime(),
+    );
+
+    const remainingToPlan = Math.max(
+        0,
+        current.targetSessions - attended - inProgress.length,
+    );
+
+    const futurePlannedIds = new Set(futurePlanned.map((item) => item.id));
+    const planningWorkouts = allWorkouts.filter(
+        (item) => !futurePlannedIds.has(item.id),
+    );
+
+    const plan = buildTrainerPlan(
+        trainerModel,
+        remainingToPlan,
+        schedule.config,
+        planningWorkouts,
+        new Date(),
+    );
+
+    if (!plan.complete) {
+        return await getActiveSubscription();
+    }
+
+    for (const item of futurePlanned) {
+        await updateWorkout(item.id, { status: 'cancelled' });
+    }
+
+    for (const session of plan.sessions) {
+        await createSubscriptionWorkout({
+            userId: user.id,
+            trainer: trainerModel,
+            subscriptionId,
+            startAt: session.startAt,
+        });
+    }
+
+    return await getActiveSubscription();
+};
+
 export const markSubscriptionWorkoutAttendedByWorkout = async (
     workoutId: string,
 ): Promise<void> => {
@@ -502,7 +586,7 @@ export const setSubscriptionWorkoutAttendance = async (
             status: 'cancelled',
         });
 
-        await ensureSubscriptionPlanned(item.subscriptionId);
+        await rebuildFutureSubscriptionPlan(item.subscriptionId);
     }
 
     const [updated] = await db.select().from(workout).where(eq(workout.id, workoutId)).limit(1);
