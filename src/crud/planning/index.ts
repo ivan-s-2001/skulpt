@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
@@ -12,7 +12,8 @@ import {
     WorkoutSelect,
 } from '@/db/schema';
 import { getCurrentUser } from '@/crud/user';
-import { createWorkout, getWorkouts } from '@/crud/workout';
+import { createWorkout, getWorkouts, updateWorkout } from '@/crud/workout';
+import { queueSyncOperation } from '@/crud/sync';
 import { nanoid } from '@/helpers/nanoid';
 import {
     TrainerSlot,
@@ -43,6 +44,66 @@ const hydrateTrainer = (row: TrainerSelect): TrainerModel => ({
     ...row,
     schedule: parseTrainerSchedule(row.scheduleJson),
 });
+
+const queueCreate = async (
+    tableName: string,
+    recordId: string,
+    row: { updatedAt: Date },
+): Promise<void> => {
+    await queueSyncOperation({
+        tableName,
+        recordId,
+        operation: 'create',
+        timestamp: row.updatedAt,
+        data: row as unknown as Record<string, unknown>,
+    });
+};
+
+const queueUpdate = async (
+    tableName: string,
+    recordId: string,
+    row: { updatedAt: Date },
+): Promise<void> => {
+    await queueSyncOperation({
+        tableName,
+        recordId,
+        operation: 'update',
+        timestamp: row.updatedAt,
+        data: row as unknown as Record<string, unknown>,
+    });
+};
+
+const queueDelete = async (
+    tableName: string,
+    recordId: string,
+    row: Record<string, unknown>,
+): Promise<void> => {
+    await queueSyncOperation({
+        tableName,
+        recordId,
+        operation: 'delete',
+        timestamp: new Date(),
+        data: row,
+    });
+};
+
+const updateSubscriptionRow = async (
+    id: string,
+    updates: Partial<SubscriptionSelect>,
+): Promise<SubscriptionSelect> => {
+    await db.update(subscription).set(updates).where(eq(subscription.id, id));
+
+    const [updated] = await db
+        .select()
+        .from(subscription)
+        .where(eq(subscription.id, id))
+        .limit(1);
+
+    if (!updated) throw new Error('Subscription not found after update');
+
+    await queueUpdate('subscription', updated.id, updated);
+    return updated;
+};
 
 export const getTrainers = async (): Promise<TrainerModel[]> => {
     const user = await getCurrentUser();
@@ -81,6 +142,7 @@ export const createTrainer = async (input: {
     const [created] = await db.select().from(trainer).where(eq(trainer.id, id)).limit(1);
     if (!created) throw new Error('Failed to create trainer');
 
+    await queueCreate('trainer', created.id, created);
     return hydrateTrainer(created);
 };
 
@@ -107,6 +169,7 @@ export const updateTrainer = async (
     const [updated] = await db.select().from(trainer).where(eq(trainer.id, id)).limit(1);
     if (!updated) throw new Error('Trainer not found after update');
 
+    await queueUpdate('trainer', updated.id, updated);
     return hydrateTrainer(updated);
 };
 
@@ -121,7 +184,11 @@ export const deleteTrainer = async (id: string): Promise<void> => {
         throw new Error('Нельзя удалить тренера активного абонемента');
     }
 
+    const [existing] = await db.select().from(trainer).where(eq(trainer.id, id)).limit(1);
+    if (!existing) return;
+
     await db.delete(trainer).where(eq(trainer.id, id));
+    await queueDelete('trainer', id, existing as unknown as Record<string, unknown>);
 };
 
 export const getWorkSchedule = async (): Promise<WorkScheduleModel> => {
@@ -166,7 +233,16 @@ export const saveWorkSchedule = async (
         });
     }
 
-    return await getWorkSchedule();
+    const saved = await getWorkSchedule();
+    if (!saved.row) throw new Error('Failed to save work schedule');
+
+    if (existing.row) {
+        await queueUpdate('work_schedule', user.id, saved.row);
+    } else {
+        await queueCreate('work_schedule', user.id, saved.row);
+    }
+
+    return saved;
 };
 
 const getSubscriptionWorkouts = async (subscriptionId: string): Promise<WorkoutSelect[]> =>
@@ -242,27 +318,25 @@ export const createSubscription = async (input: {
     const current = await getActiveSubscriptionRow();
 
     if (current) {
-        await db
-            .update(subscription)
-            .set({
-                status: 'cancelled',
-                completedAt: now,
-                updatedAt: now,
-            })
-            .where(eq(subscription.id, current.id));
+        await updateSubscriptionRow(current.id, {
+            status: 'cancelled',
+            completedAt: now,
+            updatedAt: now,
+        });
 
-        await db
-            .update(workout)
-            .set({
-                status: 'cancelled',
-                updatedAt: now,
-            })
+        const planned = await db
+            .select()
+            .from(workout)
             .where(
                 and(
                     eq(workout.subscriptionId, current.id),
                     eq(workout.status, 'planned'),
                 ),
             );
+
+        for (const item of planned) {
+            await updateWorkout(item.id, { status: 'cancelled' });
+        }
     }
 
     const subscriptionId = nanoid();
@@ -277,6 +351,15 @@ export const createSubscription = async (input: {
         createdAt: now,
         updatedAt: now,
     });
+
+    const [createdSubscription] = await db
+        .select()
+        .from(subscription)
+        .where(eq(subscription.id, subscriptionId))
+        .limit(1);
+    if (!createdSubscription) throw new Error('Failed to create subscription');
+
+    await queueCreate('subscription', createdSubscription.id, createdSubscription);
 
     for (const session of input.sessions) {
         await createSubscriptionWorkout({
@@ -309,14 +392,11 @@ export const finishSubscriptionIfComplete = async (subscriptionId: string): Prom
     if (attended < current.targetSessions) return;
 
     const now = new Date();
-    await db
-        .update(subscription)
-        .set({
-            status: 'completed',
-            completedAt: now,
-            updatedAt: now,
-        })
-        .where(eq(subscription.id, subscriptionId));
+    await updateSubscriptionRow(subscriptionId, {
+        status: 'completed',
+        completedAt: now,
+        updatedAt: now,
+    });
 };
 
 export const ensureSubscriptionPlanned = async (
@@ -346,6 +426,7 @@ export const ensureSubscriptionPlanned = async (
     const attended = own.filter(
         (item) => item.attendance === 'attended' || item.status === 'completed',
     ).length;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -387,13 +468,9 @@ export const markSubscriptionWorkoutAttendedByWorkout = async (
     if (!item?.subscriptionId || !item.trainerId) return;
 
     if (item.attendance !== 'attended') {
-        await db
-            .update(workout)
-            .set({
-                attendance: 'attended',
-                updatedAt: new Date(),
-            })
-            .where(eq(workout.id, workoutId));
+        await updateWorkout(workoutId, {
+            attendance: 'attended',
+        });
     }
 
     await finishSubscriptionIfComplete(item.subscriptionId);
@@ -411,27 +488,19 @@ export const setSubscriptionWorkoutAttendance = async (
     const now = new Date();
 
     if (attendance === 'attended') {
-        await db
-            .update(workout)
-            .set({
-                attendance: 'attended',
-                status: 'completed',
-                startedAt: item.startedAt ?? item.startAt ?? now,
-                completedAt: item.completedAt ?? now,
-                updatedAt: now,
-            })
-            .where(eq(workout.id, workoutId));
+        await updateWorkout(workoutId, {
+            attendance: 'attended',
+            status: 'completed',
+            startedAt: item.startedAt ?? item.startAt ?? now,
+            completedAt: item.completedAt ?? now,
+        });
 
         await finishSubscriptionIfComplete(item.subscriptionId);
     } else {
-        await db
-            .update(workout)
-            .set({
-                attendance: 'missed',
-                status: 'cancelled',
-                updatedAt: now,
-            })
-            .where(eq(workout.id, workoutId));
+        await updateWorkout(workoutId, {
+            attendance: 'missed',
+            status: 'cancelled',
+        });
 
         await ensureSubscriptionPlanned(item.subscriptionId);
     }
