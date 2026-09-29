@@ -2,7 +2,9 @@ import { FC, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { router } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Check, ChevronRight, X } from 'lucide-react-native';
 
+import { Title } from '@/components/typography/title';
 import { ScrollView } from '@/components/primitives/scrollview';
 import { Box } from '@/components/primitives/box';
 import { VStack } from '@/components/primitives/vstack';
@@ -15,6 +17,7 @@ import { NumericStepperField } from '@/components/primitives/numeric-stepper-fie
 import {
     useActiveSubscription,
     useCreateSubscription,
+    useSetSubscriptionWorkoutAttendance,
     useTrainers,
     useWorkSchedule,
 } from '@/hooks/use-planning';
@@ -28,18 +31,32 @@ const styles = StyleSheet.create((theme, rt) => ({
     },
     content: {
         ...theme.screenContentPadding('root'),
-        paddingBottom: rt.insets.bottom + theme.space(8),
+        paddingBottom: rt.insets.bottom + theme.space(20),
         gap: theme.space(5),
     },
     card: {
         backgroundColor: theme.colors.background,
         borderRadius: theme.radius['4xl'],
         padding: theme.space(5),
+        gap: theme.space(4),
+    },
+    heroHeader: {
+        alignItems: 'center',
         gap: theme.space(3),
+    },
+    trainerDot: (color: string) => ({
+        width: theme.space(3),
+        height: theme.space(3),
+        borderRadius: theme.radius.full,
+        backgroundColor: color,
+    }),
+    heroContent: {
+        flex: 1,
+        gap: theme.space(1),
     },
     title: {
         color: theme.colors.typography,
-        fontSize: theme.fontSize.lg.fontSize,
+        fontSize: theme.fontSize.xl.fontSize,
         fontWeight: theme.fontWeight.bold.fontWeight,
     },
     subtitle: {
@@ -48,27 +65,13 @@ const styles = StyleSheet.create((theme, rt) => ({
         fontSize: theme.fontSize.sm.fontSize,
         lineHeight: theme.fontSize.sm.lineHeight,
     },
-    chips: {
+    metricGrid: {
         gap: theme.space(2),
-        flexWrap: 'wrap',
     },
-    chip: (active: boolean) => ({
-        minHeight: theme.space(10),
-        paddingHorizontal: theme.space(4),
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: theme.radius.full,
-        backgroundColor: active ? theme.colors.foreground : theme.colors.background,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.border,
-    }),
-    chipText: (active: boolean) => ({
-        color: theme.colors.typography,
-        fontWeight: active ? theme.fontWeight.semibold.fontWeight : theme.fontWeight.medium.fontWeight,
-    }),
     metricRow: {
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: theme.space(3),
     },
     metricLabel: {
         color: theme.colors.typography,
@@ -90,34 +93,100 @@ const styles = StyleSheet.create((theme, rt) => ({
         backgroundColor: color,
         borderRadius: theme.radius.full,
     }),
-    sessionRow: {
-        minHeight: theme.space(14),
+    list: {
+        backgroundColor: theme.colors.background,
+        borderRadius: theme.radius['4xl'],
+        overflow: 'hidden',
+    },
+    row: {
+        minHeight: theme.space(16),
+        paddingHorizontal: theme.space(5),
+        paddingVertical: theme.space(3),
         alignItems: 'center',
         gap: theme.space(3),
     },
-    sessionDot: (color: string) => ({
+    rowContent: {
+        flex: 1,
+        gap: theme.space(0.5),
+    },
+    rowTitle: {
+        color: theme.colors.typography,
+        fontWeight: theme.fontWeight.medium.fontWeight,
+        textTransform: 'capitalize',
+    },
+    rowSubtitle: {
+        color: theme.colors.typography,
+        opacity: 0.5,
+        fontSize: theme.fontSize.sm.fontSize,
+    },
+    divider: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.colors.border,
+        marginLeft: theme.space(5),
+    },
+    statusDot: (color: string) => ({
         width: theme.space(3),
         height: theme.space(3),
         borderRadius: theme.radius.full,
         backgroundColor: color,
     }),
-    sessionContent: {
-        flex: 1,
-        gap: theme.space(0.5),
+    attendanceActions: {
+        gap: theme.space(2),
+        marginTop: theme.space(2),
     },
-    sessionTitle: {
+    compactAction: {
+        minHeight: theme.space(9),
+        paddingHorizontal: theme.space(3),
+        borderRadius: theme.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.foreground,
+    },
+    compactActionText: {
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.sm.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+    },
+    chips: {
+        gap: theme.space(2),
+        flexWrap: 'wrap',
+    },
+    chip: (active: boolean) => ({
+        minHeight: theme.space(10),
+        paddingHorizontal: theme.space(4),
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: active ? theme.colors.foreground : theme.colors.background,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.colors.border,
+    }),
+    chipText: (active: boolean) => ({
+        color: theme.colors.typography,
+        fontWeight: active
+            ? theme.fontWeight.semibold.fontWeight
+            : theme.fontWeight.medium.fontWeight,
+    }),
+    warning: {
+        color: theme.colors.typography,
+        opacity: 0.65,
+        fontSize: theme.fontSize.sm.fontSize,
+        lineHeight: theme.fontSize.sm.lineHeight,
+    },
+    preview: {
+        gap: theme.space(2),
+    },
+    previewRow: {
+        justifyContent: 'space-between',
+        gap: theme.space(3),
+    },
+    previewDate: {
         color: theme.colors.typography,
         fontWeight: theme.fontWeight.medium.fontWeight,
     },
-    sessionSubtitle: {
+    previewTime: {
         color: theme.colors.typography,
-        opacity: 0.5,
-        fontSize: theme.fontSize.sm.fontSize,
-    },
-    warning: {
-        color: theme.colors.orange?.[500] ?? theme.colors.typography,
-        fontSize: theme.fontSize.sm.fontSize,
-        lineHeight: theme.fontSize.sm.lineHeight,
+        opacity: 0.55,
     },
 }));
 
@@ -128,21 +197,21 @@ const SubscriptionScreen: FC = () => {
     const { data: workSchedule } = useWorkSchedule();
     const { data: workouts = [] } = useWorkouts();
     const createSubscription = useCreateSubscription();
+    const setAttendance = useSetSubscriptionWorkoutAttendance();
 
     const [target, setTarget] = useState(10);
     const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
 
     const hasSchedule = Boolean(
         workSchedule &&
-            (
-                Object.keys(workSchedule.config.weekly).length ||
+            (Object.keys(workSchedule.config.weekly).length ||
                 workSchedule.config.cycle ||
-                Object.keys(workSchedule.config.overrides).length
-            ),
+                Object.keys(workSchedule.config.overrides).length),
     );
 
     const plans = useMemo(() => {
         if (!workSchedule || !hasSchedule || !target) return [];
+
         return buildTrainerPlans(
             trainers,
             target,
@@ -156,20 +225,44 @@ const SubscriptionScreen: FC = () => {
         plans.find((plan) => plan.trainer.id === selectedTrainerId) ?? plans[0] ?? null;
 
     if (active) {
-        const attended = active.sessions.filter((session) => session.status === 'attended').length;
-        const missed = active.sessions.filter((session) => session.status === 'missed').length;
-        const planned = active.sessions.filter((session) => session.status === 'planned');
-        const next = planned.find((session) => dayjs(session.startAt).isAfter(dayjs().subtract(1, 'minute')));
+        const courseWorkouts = [...active.workouts].sort((a, b) => {
+            const aTime = a.startAt ? new Date(a.startAt).getTime() : 0;
+            const bTime = b.startAt ? new Date(b.startAt).getTime() : 0;
+            return aTime - bTime;
+        });
+
+        const attended = courseWorkouts.filter(
+            (item) => item.attendance === 'attended' || item.status === 'completed',
+        ).length;
+        const missed = courseWorkouts.filter((item) => item.attendance === 'missed').length;
+        const remaining = Math.max(0, active.subscription.targetSessions - attended);
+        const planned = courseWorkouts.filter(
+            (item) =>
+                item.attendance !== 'missed' &&
+                (item.status === 'planned' || item.status === 'in_progress'),
+        );
+        const next = planned.find(
+            (item) => item.startAt && !dayjs(item.startAt).isBefore(dayjs().subtract(1, 'minute')),
+        );
         const color = active.trainer?.color || theme.colors.lime[400];
 
         return (
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+                <Title type="h1">Абонемент</Title>
+
                 <VStack style={styles.card}>
-                    <Text style={styles.title}>{active.trainer?.name || 'Тренер'}</Text>
-                    <Text style={styles.subtitle}>Активный абонемент</Text>
+                    <HStack style={styles.heroHeader}>
+                        <Box style={styles.trainerDot(color)} />
+                        <VStack style={styles.heroContent}>
+                            <Text style={styles.title}>{active.trainer?.name || 'Тренер'}</Text>
+                            <Text style={styles.subtitle}>
+                                Активный абонемент · {active.subscription.targetSessions} занятий
+                            </Text>
+                        </VStack>
+                    </HStack>
 
                     <HStack style={styles.metricRow}>
-                        <Text style={styles.metricLabel}>Прогресс</Text>
+                        <Text style={styles.metricLabel}>Пройдено</Text>
                         <Text style={styles.metricValue}>
                             {attended}/{active.subscription.targetSessions}
                         </Text>
@@ -184,56 +277,137 @@ const SubscriptionScreen: FC = () => {
                         />
                     </Box>
 
-                    <HStack style={styles.metricRow}>
-                        <Text style={styles.metricLabel}>Пропущено</Text>
-                        <Text style={styles.metricValue}>{missed}</Text>
-                    </HStack>
-
-                    <HStack style={styles.metricRow}>
-                        <Text style={styles.metricLabel}>Следующее</Text>
-                        <Text style={styles.metricValue}>
-                            {next ? dayjs(next.startAt).format('D MMM · HH:mm') : '—'}
-                        </Text>
-                    </HStack>
+                    <VStack style={styles.metricGrid}>
+                        <HStack style={styles.metricRow}>
+                            <Text style={styles.metricLabel}>Осталось</Text>
+                            <Text style={styles.metricValue}>{remaining}</Text>
+                        </HStack>
+                        <HStack style={styles.metricRow}>
+                            <Text style={styles.metricLabel}>Пропущено</Text>
+                            <Text style={styles.metricValue}>{missed}</Text>
+                        </HStack>
+                        <HStack style={styles.metricRow}>
+                            <Text style={styles.metricLabel}>Следующее</Text>
+                            <Text style={styles.metricValue}>
+                                {next?.startAt ? dayjs(next.startAt).format('D MMM · HH:mm') : '—'}
+                            </Text>
+                        </HStack>
+                    </VStack>
                 </VStack>
 
                 <VStack style={{ gap: theme.space(3) }}>
-                    <Label>Все занятия</Label>
-                    <VStack style={styles.card}>
-                        {active.sessions.map((session) => {
-                            const status =
-                                session.status === 'attended'
-                                    ? 'Посещено'
-                                    : session.status === 'missed'
-                                      ? 'Пропущено'
-                                      : 'Запланировано';
+                    <Label>Занятия</Label>
+                    <VStack style={styles.list}>
+                        {courseWorkouts.map((item, index) => {
+                            const isAttended =
+                                item.attendance === 'attended' || item.status === 'completed';
+                            const isMissed = item.attendance === 'missed';
+                            const isPastUnresolved =
+                                !isAttended &&
+                                !isMissed &&
+                                item.startAt != null &&
+                                dayjs(item.startAt).isBefore(dayjs());
 
-                            const dot =
-                                session.status === 'attended'
-                                    ? theme.colors.lime[400]
-                                    : session.status === 'missed'
-                                      ? theme.colors.red[500]
-                                      : color;
+                            const status = isAttended
+                                ? 'Посещено'
+                                : isMissed
+                                  ? 'Пропущено'
+                                  : item.status === 'in_progress'
+                                    ? 'Идёт сейчас'
+                                    : 'Запланировано';
+
+                            const dot = isAttended
+                                ? theme.colors.lime[400]
+                                : isMissed
+                                  ? theme.colors.red[500]
+                                  : color;
 
                             return (
-                                <Pressable
-                                    key={session.id}
-                                    disabled={!session.workoutId}
-                                    onPress={() =>
-                                        session.workoutId &&
-                                        router.navigate(`/workout/${session.workoutId}`)
-                                    }
-                                >
-                                    <HStack style={styles.sessionRow}>
-                                        <Box style={styles.sessionDot(dot)} />
-                                        <VStack style={styles.sessionContent}>
-                                            <Text style={styles.sessionTitle}>
-                                                {dayjs(session.startAt).format('dddd, D MMMM · HH:mm')}
-                                            </Text>
-                                            <Text style={styles.sessionSubtitle}>{status}</Text>
-                                        </VStack>
-                                    </HStack>
-                                </Pressable>
+                                <VStack key={item.id}>
+                                    <Pressable
+                                        disabled={isMissed}
+                                        onPress={() => router.navigate(`/workout/${item.id}`)}
+                                    >
+                                        <HStack style={styles.row}>
+                                            <Box style={styles.statusDot(dot)} />
+                                            <VStack style={styles.rowContent}>
+                                                <Text style={styles.rowTitle}>
+                                                    {item.startAt
+                                                        ? dayjs(item.startAt).format(
+                                                              'dddd, D MMMM · HH:mm',
+                                                          )
+                                                        : 'Без даты'}
+                                                </Text>
+                                                <Text style={styles.rowSubtitle}>{status}</Text>
+
+                                                {isPastUnresolved && (
+                                                    <HStack style={styles.attendanceActions}>
+                                                        <Pressable
+                                                            style={styles.compactAction}
+                                                            onPress={() =>
+                                                                setAttendance.mutate({
+                                                                    workoutId: item.id,
+                                                                    attendance: 'attended',
+                                                                })
+                                                            }
+                                                        >
+                                                            <HStack
+                                                                style={{
+                                                                    alignItems: 'center',
+                                                                    gap: theme.space(1),
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    size={theme.space(4)}
+                                                                    color={theme.colors.typography}
+                                                                />
+                                                                <Text style={styles.compactActionText}>
+                                                                    Ходил
+                                                                </Text>
+                                                            </HStack>
+                                                        </Pressable>
+
+                                                        <Pressable
+                                                            style={styles.compactAction}
+                                                            onPress={() =>
+                                                                setAttendance.mutate({
+                                                                    workoutId: item.id,
+                                                                    attendance: 'missed',
+                                                                })
+                                                            }
+                                                        >
+                                                            <HStack
+                                                                style={{
+                                                                    alignItems: 'center',
+                                                                    gap: theme.space(1),
+                                                                }}
+                                                            >
+                                                                <X
+                                                                    size={theme.space(4)}
+                                                                    color={theme.colors.typography}
+                                                                />
+                                                                <Text style={styles.compactActionText}>
+                                                                    Не ходил
+                                                                </Text>
+                                                            </HStack>
+                                                        </Pressable>
+                                                    </HStack>
+                                                )}
+                                            </VStack>
+
+                                            {!isMissed && (
+                                                <ChevronRight
+                                                    size={theme.space(5)}
+                                                    color={theme.colors.typography}
+                                                    opacity={0.35}
+                                                />
+                                            )}
+                                        </HStack>
+                                    </Pressable>
+                                    {index < courseWorkouts.length - 1 && (
+                                        <Box style={styles.divider} />
+                                    )}
+                                </VStack>
                             );
                         })}
                     </VStack>
@@ -260,8 +434,18 @@ const SubscriptionScreen: FC = () => {
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+            <Title type="h1">Абонемент</Title>
+
+            <VStack style={styles.card}>
+                <Text style={styles.title}>Создать абонемент</Text>
+                <Text style={styles.subtitle}>
+                    Укажи количество занятий. Skulpt найдёт пересечения твоего графика с
+                    расписанием тренеров и сразу создаст будущие тренировки.
+                </Text>
+            </VStack>
+
             <VStack style={{ gap: theme.space(3) }}>
-                <Label>Размер абонемента</Label>
+                <Label>Количество занятий</Label>
                 <VStack style={styles.card}>
                     <NumericStepperField
                         value={target}
@@ -303,12 +487,13 @@ const SubscriptionScreen: FC = () => {
 
             {hasSchedule && trainers.length > 0 && (
                 <VStack style={{ gap: theme.space(3) }}>
-                    <Label>Варианты</Label>
+                    <Label>Подходящие варианты</Label>
 
                     {plans.length > 0 && (
                         <HStack style={styles.chips}>
                             {plans.map((plan, index) => {
                                 const activeChip = selectedPlan?.trainer.id === plan.trainer.id;
+
                                 return (
                                     <Pressable
                                         key={plan.trainer.id}
@@ -317,7 +502,7 @@ const SubscriptionScreen: FC = () => {
                                         <Box style={styles.chip(activeChip)}>
                                             <Text style={styles.chipText(activeChip)}>
                                                 {plan.trainer.name} · {plan.sessions.length}/{target}
-                                                {index === 0 ? ' · лучший' : ''}
+                                                {index === 0 ? ' · по графику' : ''}
                                             </Text>
                                         </Box>
                                     </Pressable>
@@ -338,7 +523,7 @@ const SubscriptionScreen: FC = () => {
                             </HStack>
 
                             <HStack style={styles.metricRow}>
-                                <Text style={styles.metricLabel}>Последнее занятие</Text>
+                                <Text style={styles.metricLabel}>Курс до</Text>
                                 <Text style={styles.metricValue}>
                                     {selectedPlan.finishAt
                                         ? dayjs(selectedPlan.finishAt).format('D MMM')
@@ -346,10 +531,26 @@ const SubscriptionScreen: FC = () => {
                                 </Text>
                             </HStack>
 
+                            <VStack style={styles.preview}>
+                                {selectedPlan.sessions.slice(0, 5).map((session) => (
+                                    <HStack
+                                        key={session.startAt.toISOString()}
+                                        style={styles.previewRow}
+                                    >
+                                        <Text style={styles.previewDate}>
+                                            {dayjs(session.startAt).format('ddd, D MMM')}
+                                        </Text>
+                                        <Text style={styles.previewTime}>
+                                            {dayjs(session.startAt).format('HH:mm')}
+                                        </Text>
+                                    </HStack>
+                                ))}
+                            </VStack>
+
                             {!selectedPlan.complete && selectedPlan.missingSchedule && (
                                 <Text style={styles.warning}>
-                                    Не хватает будущего личного графика. Заполни следующие даты —
-                                    это не означает, что тренер не подходит.
+                                    Будущий личный график заполнен не полностью. Добавь следующие
+                                    даты — это не означает, что тренер не подходит.
                                 </Text>
                             )}
 
