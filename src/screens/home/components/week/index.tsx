@@ -24,14 +24,12 @@ const getWeekStart = (date: dayjs.Dayjs, firstWeekday: number): dayjs.Dayjs => {
 };
 
 const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
-    if (workout.status === 'cancelled') return null;
-
     const date =
         workout.status === 'planned'
             ? workout.startAt
             : workout.status === 'completed'
-              ? workout.completedAt ?? workout.startedAt ?? workout.startAt ?? workout.createdAt
-              : workout.startedAt ?? workout.startAt ?? workout.createdAt;
+              ? workout.completedAt
+              : workout.startedAt ?? workout.startAt;
 
     if (!date) return null;
 
@@ -164,11 +162,6 @@ export const WeekStats: FC<WeekStatsProps> = ({
         const today = dayjs();
         const weekStart = getWeekStart(today, firstWeekday);
         const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, { weekday: 'short' });
-        const dateFormatter = new Intl.DateTimeFormat(i18n.language, {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-        });
         const todayKey = today.format('YYYY-MM-DD');
 
         return Array.from({ length: 7 }, (_, index) => {
@@ -181,7 +174,6 @@ export const WeekStats: FC<WeekStatsProps> = ({
                 dateKey,
                 day: date.date(),
                 weekday,
-                accessibilityLabel: dateFormatter.format(date.toDate()),
                 isToday: dateKey === todayKey,
                 isSelected: dateKey === selectedDate,
                 hasPlanned: Boolean(state?.planned),
@@ -215,13 +207,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
 
                         return (
                             <Box key={item.dateKey} style={styles.dayCell}>
-                                <Pressable
-                                    onPress={() => onSelectDate(item.dateKey)}
-                                    hitSlop={2}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={item.accessibilityLabel}
-                                    accessibilityState={{ selected: item.isSelected }}
-                                >
+                                <Pressable onPress={() => onSelectDate(item.dateKey)}>
                                     <Box
                                         style={[
                                             styles.dayCircle,
