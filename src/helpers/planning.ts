@@ -62,6 +62,92 @@ export const parseWorkSchedule = (value?: string | null): WorkScheduleConfig => 
 export const serializeWorkSchedule = (config: WorkScheduleConfig): string =>
     JSON.stringify(config);
 
+const normalizeTime = (hours: string, minutes: string): string => {
+    const h = Number(hours);
+    const m = Number(minutes);
+    if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+        throw new Error('Invalid time');
+    }
+
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+export const parseShiftLine = (line: string): WorkShift | null | undefined => {
+    const value = line.trim();
+    if (!value) return undefined;
+    if (/^[-—–]$/.test(value)) return null;
+
+    const match = value.match(
+        /^(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:до|[-–—])\s*(\d{1,2})\s*[:.]\s*(\d{2})$/i,
+    );
+
+    if (!match) return undefined;
+
+    try {
+        return {
+            start: normalizeTime(match[1], match[2]),
+            end: normalizeTime(match[3], match[4]),
+        };
+    } catch {
+        return undefined;
+    }
+};
+
+export const parseMonthShiftList = (
+    month: string,
+    raw: string,
+): {
+    overrides: Record<string, WorkShift | null>;
+    warnings: string[];
+} => {
+    const [year, monthNumber] = month.split('-').map(Number);
+    const daysInMonth = dayjs(`${year}-${String(monthNumber).padStart(2, '0')}-01`).daysInMonth();
+    const lines = raw.replace(/\r/g, '').split('\n');
+    const overrides: Record<string, WorkShift | null> = {};
+    const warnings: string[] = [];
+
+    for (let index = 0; index < Math.min(lines.length, daysInMonth); index++) {
+        const parsed = parseShiftLine(lines[index]);
+        if (parsed === undefined) {
+            if (lines[index].trim()) warnings.push(`${index + 1}: ${lines[index].trim()}`);
+            continue;
+        }
+
+        const dateKey = `${month}-${String(index + 1).padStart(2, '0')}`;
+        overrides[dateKey] = parsed;
+    }
+
+    if (lines.length > daysInMonth) {
+        warnings.push(`Строк после ${daysInMonth}-го дня: ${lines.length - daysInMonth}`);
+    }
+
+    return { overrides, warnings };
+};
+
+export const parseCycleShiftList = (
+    raw: string,
+): {
+    days: Array<WorkShift | null>;
+    warnings: string[];
+} => {
+    const days: Array<WorkShift | null> = [];
+    const warnings: string[] = [];
+
+    raw.replace(/\r/g, '')
+        .split('\n')
+        .forEach((line, index) => {
+            const parsed = parseShiftLine(line);
+            if (parsed === undefined) {
+                if (line.trim()) warnings.push(`${index + 1}: ${line.trim()}`);
+                return;
+            }
+
+            days.push(parsed);
+        });
+
+    return { days, warnings };
+};
+
 export const resolveWorkShift = (
     config: WorkScheduleConfig,
     dateKey: string,
