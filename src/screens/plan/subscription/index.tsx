@@ -176,6 +176,7 @@ const SubscriptionScreen: FC = () => {
 
     const [target, setTarget] = useState(10);
     const [selectedTrainerId, setSelectedTrainerId] = useState<string | null>(null);
+    const [showAllPreview, setShowAllPreview] = useState(false);
 
     const hasSchedule = Boolean(
         workSchedule &&
@@ -198,6 +199,12 @@ const SubscriptionScreen: FC = () => {
 
     const selectedPlan =
         plans.find((plan) => plan.trainer.id === selectedTrainerId) ?? plans[0] ?? null;
+
+    const previewSessions = selectedPlan
+        ? showAllPreview
+            ? selectedPlan.sessions
+            : selectedPlan.sessions.slice(0, 5)
+        : [];
 
     if (active) {
         const courseWorkouts = active.workouts
@@ -467,6 +474,22 @@ const SubscriptionScreen: FC = () => {
                 <VStack style={{ gap: theme.space(3) }}>
                     <Label>Подходящие варианты</Label>
 
+                    {plans.length === 0 && (
+                        <VStack style={styles.card}>
+                            <Text style={styles.subtitle}>
+                                У добавленных тренеров пока нет рабочего времени.
+                                Укажи дни и часы, чтобы Skulpt смог найти пересечения.
+                            </Text>
+                            <Button
+                                type="link"
+                                title="Настроить тренеров"
+                                onPress={() =>
+                                    router.navigate('/subscription-settings/trainers' as any)
+                                }
+                            />
+                        </VStack>
+                    )}
+
                     {plans.length > 0 && (
                         <HStack style={styles.chips}>
                             {plans.map((plan, index) => {
@@ -475,7 +498,10 @@ const SubscriptionScreen: FC = () => {
                                 return (
                                     <Pressable
                                         key={plan.trainer.id}
-                                        onPress={() => setSelectedTrainerId(plan.trainer.id)}
+                                        onPress={() => {
+                                            setSelectedTrainerId(plan.trainer.id);
+                                            setShowAllPreview(false);
+                                        }}
                                     >
                                         <Box style={styles.chip(activeChip)}>
                                             <Text style={styles.chipText(activeChip)}>
@@ -513,7 +539,7 @@ const SubscriptionScreen: FC = () => {
                             </HStack>
 
                             <VStack style={styles.preview}>
-                                {selectedPlan.sessions.slice(0, 5).map((session) => (
+                                {previewSessions.map((session) => (
                                     <HStack
                                         key={session.startAt.toISOString()}
                                         style={styles.previewRow}
@@ -528,10 +554,33 @@ const SubscriptionScreen: FC = () => {
                                 ))}
                             </VStack>
 
+                            {selectedPlan.sessions.length > 5 && (
+                                <Button
+                                    type="link"
+                                    size="sm"
+                                    title={
+                                        showAllPreview
+                                            ? 'Свернуть'
+                                            : `Показать все (${selectedPlan.sessions.length})`
+                                    }
+                                    onPress={() =>
+                                        setShowAllPreview((current) => !current)
+                                    }
+                                />
+                            )}
+
                             {!selectedPlan.complete && selectedPlan.missingSchedule && (
                                 <Text style={styles.warning}>
                                     Будущий личный график заполнен не полностью. Добавь следующие
                                     даты — это не означает, что тренер не подходит.
+                                </Text>
+                            )}
+
+                            {!selectedPlan.complete && !selectedPlan.missingSchedule && (
+                                <Text style={styles.warning}>
+                                    По текущим пересечениям получается только{' '}
+                                    {selectedPlan.sessions.length} из {target} занятий.
+                                    Измени личный график или рабочее время тренера.
                                 </Text>
                             )}
 
