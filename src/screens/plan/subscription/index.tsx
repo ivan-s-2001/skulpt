@@ -17,6 +17,7 @@ import { NumericStepperField } from '@/components/primitives/numeric-stepper-fie
 import {
     useActiveSubscription,
     useCreateSubscription,
+    useRebuildSubscriptionPlan,
     useSetSubscriptionWorkoutAttendance,
     useTrainers,
     useWorkSchedule,
@@ -192,6 +193,7 @@ const SubscriptionScreen: FC = () => {
     const { data: workSchedule } = useWorkSchedule();
     const { data: workouts = [] } = useWorkouts();
     const createSubscription = useCreateSubscription();
+    const rebuildSubscription = useRebuildSubscriptionPlan();
     const setAttendance = useSetSubscriptionWorkoutAttendance();
 
     const [target, setTarget] = useState(10);
@@ -411,6 +413,14 @@ const SubscriptionScreen: FC = () => {
                     </VStack>
                 </VStack>
 
+                <Button
+                    type="link"
+                    title="Перестроить будущие занятия"
+                    loading={rebuildSubscription.isPending}
+                    onPress={() =>
+                        rebuildSubscription.mutate(active.subscription.id)
+                    }
+                />
                 <Button
                     type="link"
                     title="Тренеры"
