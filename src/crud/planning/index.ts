@@ -12,6 +12,7 @@ import {
     WorkScheduleSelect,
 } from '@/db/schema';
 import { getCurrentUser } from '@/crud/user';
+import { createWorkout } from '@/crud/workout';
 import { nanoid } from '@/helpers/nanoid';
 import {
     TrainerSlot,
@@ -226,18 +227,36 @@ export const createSubscription = async (input: {
     });
 
     if (input.sessions.length) {
-        await db.insert(subscriptionSession).values(
-            input.sessions.map((session) => ({
+        const [trainerRow] = await db
+            .select()
+            .from(trainer)
+            .where(eq(trainer.id, input.trainerId))
+            .limit(1);
+
+        if (!trainerRow) throw new Error('Trainer not found');
+
+        const sessionRows = [];
+        for (const session of input.sessions) {
+            const plannedWorkout = await createWorkout({
+                name: trainerRow.name,
+                status: 'planned',
+                startAt: session.startAt,
+                userId: user.id,
+            });
+
+            sessionRows.push({
                 id: nanoid(),
                 subscriptionId,
-                workoutId: null,
+                workoutId: plannedWorkout.id,
                 startAt: session.startAt,
                 endAt: session.endAt,
                 status: 'planned' as const,
                 createdAt: now,
                 updatedAt: now,
-            })),
-        );
+            });
+        }
+
+        await db.insert(subscriptionSession).values(sessionRows);
     }
 
     const created = await getActiveSubscription();
@@ -294,4 +313,22 @@ export const finishSubscriptionIfComplete = async (subscriptionId: string): Prom
             updatedAt: now,
         })
         .where(eq(subscription.id, subscriptionId));
+};
+
+export const markSubscriptionSessionAttendedByWorkout = async (
+    workoutId: string,
+): Promise<void> => {
+    const [session] = await db
+        .select()
+        .from(subscriptionSession)
+        .where(eq(subscriptionSession.workoutId, workoutId))
+        .limit(1);
+
+    if (!session || session.status === 'attended') return;
+
+    await updateSubscriptionSession(session.id, {
+        status: 'attended',
+        workoutId,
+    });
+    await finishSubscriptionIfComplete(session.subscriptionId);
 };
