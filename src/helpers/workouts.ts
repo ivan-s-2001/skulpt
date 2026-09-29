@@ -12,11 +12,13 @@ export interface WorkoutGroup {
 
 export const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
     const date =
-        workout.status === 'planned'
+        workout.subscriptionId && workout.startAt
             ? workout.startAt
-            : workout.status === 'completed'
-              ? workout.completedAt
-              : workout.startedAt ?? workout.startAt;
+            : workout.status === 'planned'
+              ? workout.startAt
+              : workout.status === 'completed'
+                ? workout.completedAt
+                : workout.startedAt ?? workout.startAt;
 
     if (!date) return null;
 
