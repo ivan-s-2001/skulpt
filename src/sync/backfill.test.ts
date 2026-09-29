@@ -77,8 +77,16 @@ const mockAppReviewPromptRow = {
     updatedAt: new Date(1500),
 };
 
+const mockWorkScheduleRow = {
+    userId: 'user_1',
+    configJson: '{"weekly":{}}',
+    createdAt: new Date(500),
+    updatedAt: new Date(1600),
+};
+
 const rowsForTable = (tableName: string) => {
     if (tableName === 'app_review_prompt') return [mockAppReviewPromptRow];
+    if (tableName === 'work_schedule') return [mockWorkScheduleRow];
     return [];
 };
 
@@ -134,6 +142,15 @@ describe('sync backfill', () => {
                 recordId: 'prompt_1',
                 operation: 'update',
                 data: mockAppReviewPromptRow,
+            }),
+        ]);
+
+        expect(mockQueueSyncOperations).toHaveBeenCalledWith([
+            expect.objectContaining({
+                tableName: 'work_schedule',
+                recordId: 'user_1',
+                operation: 'update',
+                data: mockWorkScheduleRow,
             }),
         ]);
     });
