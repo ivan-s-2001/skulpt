@@ -155,7 +155,7 @@ The user scope currently handles these tables:
 
 Schema v3 also extends `workout` with `trainerId`, `subscriptionId`, and `attendance` (`attended` or `missed`). A provider must persist these fields so subscription workouts remain linked to the same trainer and subscription on every device.
 
-For `work_schedule`, the sync record identifier is `userId` because the table stores one schedule row per user. Providers should treat `trainer`, `subscription`, `work_schedule`, and subscription-linked `workout` rows as user-owned data and validate all referenced IDs within the same user scope.
+For `work_schedule`, the sync record identifier is `userId` because the table stores one schedule row per user. Outgoing `work_schedule` records contain `userId` and do not use a synthetic `id` field; deletes use that same user ID in `deleted`. Providers should treat `trainer`, `subscription`, `work_schedule`, and subscription-linked `workout` rows as user-owned data and validate all referenced IDs within the same user scope.
 
 The `skulpt` scope distributes maintained exercise records separately from user-created exercises. Current field definitions live in `src/db/schema/`.
 
