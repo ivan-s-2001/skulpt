@@ -571,11 +571,18 @@ export const setSubscriptionWorkoutAttendance = async (
     const now = new Date();
 
     if (attendance === 'attended') {
+        const startedAt = item.startedAt ?? item.startAt ?? now;
+        const completedAt =
+            item.completedAt ??
+            (item.startedAt
+                ? now
+                : new Date(startedAt.getTime() + 60 * 60 * 1000));
+
         await updateWorkout(workoutId, {
             attendance: 'attended',
             status: 'completed',
-            startedAt: item.startedAt ?? item.startAt ?? now,
-            completedAt: item.completedAt ?? now,
+            startedAt,
+            completedAt,
         });
 
         await finishSubscriptionIfComplete(item.subscriptionId);
