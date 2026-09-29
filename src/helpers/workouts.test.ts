@@ -27,4 +27,16 @@ describe('getWorkoutDateKey', () => {
             ),
         ).toBe('2026-10-04');
     });
+
+    test('keeps subscription workout on its scheduled date', () => {
+        expect(
+            getWorkoutDateKey(
+                workout('completed', {
+                    subscriptionId: 'subscription-1',
+                    startAt: new Date('2026-10-03T23:30:00'),
+                    completedAt: new Date('2026-10-04T00:30:00'),
+                }),
+            ),
+        ).toBe('2026-10-03');
+    });
 });
