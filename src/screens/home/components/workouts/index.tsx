@@ -1,4 +1,5 @@
 import { FC, useCallback, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -207,7 +208,7 @@ export const Workouts: FC<WorkoutsProps> = ({
         return `${count} ${count === 1 ? 'тренировка' : count < 5 ? 'тренировки' : 'тренировок'}`;
     }, [selectedWorkouts.length]);
 
-    const handleAddSolo = useCallback(() => {
+    const openSoloEditor = useCallback(() => {
         let startAt = dayjs(selectedDate)
             .hour(18)
             .minute(0)
@@ -228,6 +229,36 @@ export const Workouts: FC<WorkoutsProps> = ({
             },
         });
     }, [openEditor, selectedDate]);
+
+    const handleAddSolo = useCallback(() => {
+        const hasTrainerWorkout = selectedWorkouts.some(
+            (workout) =>
+                Boolean(workout.subscriptionId && workout.trainerId) &&
+                workout.attendance !== 'missed' &&
+                (workout.status === 'planned' ||
+                    workout.status === 'in_progress'),
+        );
+
+        if (!hasTrainerWorkout) {
+            openSoloEditor();
+            return;
+        }
+
+        Alert.alert(
+            'В этот день уже есть тренировка с тренером',
+            'Занятие по абонементу останется в расписании. Добавь соло только если действительно хочешь две тренировки в один день.',
+            [
+                {
+                    text: 'Отмена',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Добавить соло',
+                    onPress: openSoloEditor,
+                },
+            ],
+        );
+    }, [openSoloEditor, selectedWorkouts]);
 
     const renderHeader = useCallback(
         () => (
