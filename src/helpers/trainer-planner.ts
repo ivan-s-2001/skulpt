@@ -49,6 +49,7 @@ type WorkoutContext = {
 
 const WORKOUT_MINUTES = 60;
 const TRAVEL_MINUTES = 30;
+const PLANNER_STEP_MINUTES = 15;
 const HORIZON_DAYS = 180;
 const MAX_TRAINER_PER_WEEK = 3;
 const MAX_TOTAL_WORKOUTS_PER_WEEK = 5;
@@ -61,6 +62,11 @@ const toMinutes = (value: string): number => {
 const atTime = (dateKey: string, value: string): Date => {
     const [hours, minutes] = value.split(':').map(Number);
     return dayjs(dateKey).hour(hours).minute(minutes).second(0).millisecond(0).toDate();
+};
+
+const ceilToStep = (timestamp: number): number => {
+    const stepMs = PLANNER_STEP_MINUTES * 60 * 1000;
+    return Math.ceil(timestamp / stepMs) * stepMs;
 };
 
 const shiftBlock = (
@@ -126,6 +132,7 @@ const findSessionForDate = (
     schedule: TrainerSlot[],
     config: WorkScheduleConfig,
     dateKey: string,
+    notBefore?: Date,
 ): PlannedTrainerSession | null => {
     const weekday = dayjs(dateKey).day();
     const slots = schedule
@@ -142,11 +149,16 @@ const findSessionForDate = (
         if (end <= start) end += 24 * 60 * 60 * 1000;
 
         for (const [freeStart, freeEnd] of subtractIntervals([start, end], blocks)) {
-            if (freeEnd - freeStart < WORKOUT_MINUTES * 60 * 1000) continue;
+            const effectiveStart = Math.max(
+                freeStart,
+                notBefore ? ceilToStep(notBefore.getTime()) : freeStart,
+            );
+
+            if (freeEnd - effectiveStart < WORKOUT_MINUTES * 60 * 1000) continue;
 
             return {
-                startAt: new Date(freeStart),
-                endAt: new Date(freeStart + WORKOUT_MINUTES * 60 * 1000),
+                startAt: new Date(effectiveStart),
+                endAt: new Date(effectiveStart + WORKOUT_MINUTES * 60 * 1000),
             };
         }
     }
@@ -386,7 +398,8 @@ export const buildTrainerPlan = (
     workouts: WorkoutSelect[],
     startDate: Date = new Date(),
 ): TrainerPlanCandidate => {
-    const from = dayjs(startDate).startOf('day');
+    const startMoment = dayjs(startDate);
+    const from = startMoment.startOf('day');
     const context = getWorkoutContext(workouts, trainer.id, from);
     const candidates: CandidateSession[] = [];
     let missingSchedule = false;
@@ -411,7 +424,14 @@ export const buildTrainerPlan = (
             continue;
         }
 
-        const session = findSessionForDate(trainer.schedule, config, dateKey);
+        const notBefore =
+            dateKey === from.format('YYYY-MM-DD') ? startMoment.toDate() : undefined;
+        const session = findSessionForDate(
+            trainer.schedule,
+            config,
+            dateKey,
+            notBefore,
+        );
         if (!session) continue;
 
         candidates.push({
