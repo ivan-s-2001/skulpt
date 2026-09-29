@@ -173,9 +173,7 @@ const ResultsScreen = () => {
                     <Label style={styles.label}>Абонемент</Label>
                     <SubscriptionProgressCard
                         trainerName={activeSubscription.trainer?.name || 'Тренер'}
-                        trainerColor={
-                            activeSubscription.trainer?.color || '#a3e635'
-                        }
+                        trainerColor={activeSubscription.trainer?.color}
                         attended={subscriptionStats.attended}
                         target={activeSubscription.subscription.targetSessions}
                         missed={subscriptionStats.missed}
