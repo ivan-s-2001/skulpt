@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "Главная",
+        "title": "График",
         "planned": "Запланированные",
         "workoutsCount_one": "{{count}} тренировка",
         "workoutsCount_two": "{{count}} тренировки",
