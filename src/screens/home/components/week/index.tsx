@@ -1,7 +1,7 @@
 import { FC, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { WorkoutSelect } from '@/db/schema';
 import { Box } from '@/components/primitives/box';
@@ -117,6 +117,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
     trainerColorById = {},
 }) => {
     const { i18n } = useTranslation(['screens']);
+    const { theme } = useUnistyles();
 
     const workoutStateByDate = useMemo(() => {
         const map = new Map<
@@ -257,10 +258,10 @@ export const WeekStats: FC<WeekStatsProps> = ({
                                                     const color =
                                                         indicator === 'solo'
                                                             ? onlyCompleted
-                                                                ? 'rgba(10, 10, 10, 0.82)'
-                                                                : '#a3e635'
+                                                                ? theme.colors.neutral[950]
+                                                                : theme.colors.lime[400]
                                                             : indicator === 'missed'
-                                                              ? '#ef4444'
+                                                              ? theme.colors.red[500]
                                                               : indicator;
 
                                                     return (
