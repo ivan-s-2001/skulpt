@@ -36,11 +36,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         gap: theme.space(1),
     },
-    title: {
-        color: theme.colors.typography,
-        fontSize: theme.fontSize.lg.fontSize,
-        fontWeight: theme.fontWeight.bold.fontWeight,
-    },
     subtitle: {
         color: theme.colors.typography,
         opacity: 0.5,
@@ -76,6 +71,19 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: theme.fontSize.default.fontSize,
         fontWeight: theme.fontWeight.semibold.fontWeight,
     },
+    nextRow: {
+        minHeight: theme.space(8),
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: theme.space(3),
+    },
+    nextValue: {
+        flexShrink: 1,
+        textAlign: 'right',
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.sm.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+    },
 }));
 
 export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
@@ -96,11 +104,17 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
         <VStack style={styles.card}>
             <HStack style={styles.header}>
                 <VStack style={styles.titleWrap}>
-                    <TrainerBadge name={trainerName} color={trainerColor} subtle />
+                    <TrainerBadge
+                        name={trainerName}
+                        color={trainerColor}
+                    />
                     {!compact && (
-                        <Text style={styles.subtitle}>Активный абонемент · {target} занятий</Text>
+                        <Text style={styles.subtitle}>
+                            Активный абонемент · {target} занятий
+                        </Text>
                     )}
                 </VStack>
+
                 {onPress && (
                     <ChevronRight
                         size={theme.space(5)}
@@ -122,22 +136,27 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
             <HStack style={styles.metrics}>
                 <VStack style={styles.metric}>
                     <Text style={styles.metricLabel}>Пройдено</Text>
-                    <Text style={styles.metricValue}>{attended}/{target}</Text>
+                    <Text style={styles.metricValue}>
+                        {attended}/{target}
+                    </Text>
                 </VStack>
+
                 <VStack style={styles.metric}>
                     <Text style={styles.metricLabel}>Осталось</Text>
                     <Text style={styles.metricValue}>{remaining}</Text>
                 </VStack>
+
                 {!compact && (
                     <VStack style={styles.metric}>
                         <Text style={styles.metricLabel}>Пропущено</Text>
                         <Text style={styles.metricValue}>{missed}</Text>
                     </VStack>
                 )}
-                <VStack style={styles.metric}>
-                    <Text style={styles.metricLabel}>Следующее</Text>
-                    <Text style={styles.metricValue}>{next}</Text>
-                </VStack>
+            </HStack>
+
+            <HStack style={styles.nextRow}>
+                <Text style={styles.metricLabel}>Следующее</Text>
+                <Text style={styles.nextValue}>{next}</Text>
             </HStack>
         </VStack>
     );
