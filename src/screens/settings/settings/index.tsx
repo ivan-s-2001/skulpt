@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as MailComposer from 'expo-mail-composer';
 import {
     Globe,
+    CalendarDays,
     ChevronRight,
     Bell,
     Lock,
@@ -186,6 +187,11 @@ const SettingsScreen = () => {
     };
 
     const settings = [
+        {
+            icon: CalendarDays,
+            title: 'Мой график',
+            onPress: () => router.navigate('/settings/schedule' as any),
+        },
         {
             icon: Bell,
             title: t('settings.items.notifications.title', { ns: 'screens' }),
