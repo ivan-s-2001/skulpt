@@ -1,8 +1,7 @@
-import { FC, useCallback, useMemo } from 'react';
+import { FC, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
-import { useRouter } from 'expo-router';
 
 import { WorkoutSelect } from '@/db/schema';
 import { Box } from '@/components/primitives/box';
@@ -14,12 +13,28 @@ import { Pressable } from '@/components/primitives/pressable';
 interface WeekStatsProps {
     workouts: WorkoutSelect[];
     firstWeekday: number;
+    selectedDate: string;
+    onSelectDate: (dateKey: string) => void;
 }
 
 const getWeekStart = (date: dayjs.Dayjs, firstWeekday: number): dayjs.Dayjs => {
     const day = date.day();
     const offset = firstWeekday === 1 ? day : day === 0 ? 6 : day - 1;
     return date.subtract(offset, 'day').startOf('day');
+};
+
+const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
+    const date =
+        workout.status === 'planned'
+            ? workout.startAt
+            : workout.status === 'completed'
+              ? workout.completedAt
+              : workout.startedAt ?? workout.startAt;
+
+    if (!date) return null;
+
+    const parsed = dayjs(date);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
 };
 
 const styles = StyleSheet.create((theme) => ({
@@ -65,9 +80,16 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: theme.space(0.25),
         borderColor: theme.colors.border,
     },
+    dayCirclePlanned: {
+        backgroundColor: theme.colors.foreground,
+    },
     dayCircleCompleted: {
         backgroundColor: theme.colors.lime[400],
         borderColor: theme.colors.lime[400],
+    },
+    dayCircleSelected: {
+        borderWidth: theme.space(0.5),
+        borderColor: theme.colors.typography,
     },
     dayCircleToday: {
         borderColor: theme.colors.typography,
@@ -82,26 +104,58 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.neutral[950],
         opacity: 1,
     },
-    dayTextToday: {
+    dayTextSelected: {
         opacity: 1,
+    },
+    indicator: {
+        position: 'absolute',
+        bottom: theme.space(1.25),
+        width: theme.space(1),
+        height: theme.space(1),
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.lime[400],
+    },
+    indicatorCompleted: {
+        backgroundColor: theme.colors.neutral[950],
     },
 }));
 
-export const WeekStats: FC<WeekStatsProps> = ({ workouts, firstWeekday }) => {
+export const WeekStats: FC<WeekStatsProps> = ({
+    workouts,
+    firstWeekday,
+    selectedDate,
+    onSelectDate,
+}) => {
     const { i18n } = useTranslation(['screens']);
-    const router = useRouter();
 
-    const workoutDayKeys = useMemo(() => {
-        const keys = new Set<string>();
+    const workoutStateByDate = useMemo(() => {
+        const map = new Map<
+            string,
+            {
+                planned: boolean;
+                inProgress: boolean;
+                completed: boolean;
+            }
+        >();
+
         workouts.forEach((workout) => {
-            if (workout.status !== 'completed') return;
-            const workoutDate = workout.completedAt ?? workout.startedAt ?? workout.createdAt;
-            if (!workoutDate) return;
-            const date = dayjs(workoutDate);
-            if (!date.isValid()) return;
-            keys.add(date.format('YYYY-MM-DD'));
+            const dateKey = getWorkoutDateKey(workout);
+            if (!dateKey) return;
+
+            const state = map.get(dateKey) ?? {
+                planned: false,
+                inProgress: false,
+                completed: false,
+            };
+
+            if (workout.status === 'planned') state.planned = true;
+            if (workout.status === 'in_progress') state.inProgress = true;
+            if (workout.status === 'completed') state.completed = true;
+
+            map.set(dateKey, state);
         });
-        return keys;
+
+        return map;
     }, [workouts]);
 
     const weekDays = useMemo(() => {
@@ -114,26 +168,20 @@ export const WeekStats: FC<WeekStatsProps> = ({ workouts, firstWeekday }) => {
             const date = weekStart.add(index, 'day');
             const dateKey = date.format('YYYY-MM-DD');
             const weekday = weekdayFormatter.format(date.toDate());
+            const state = workoutStateByDate.get(dateKey);
 
             return {
                 dateKey,
                 day: date.date(),
                 weekday,
                 isToday: dateKey === todayKey,
-                isWorkoutDay: workoutDayKeys.has(dateKey),
+                isSelected: dateKey === selectedDate,
+                hasPlanned: Boolean(state?.planned),
+                hasInProgress: Boolean(state?.inProgress),
+                hasCompleted: Boolean(state?.completed),
             };
         });
-    }, [firstWeekday, i18n.language, workoutDayKeys]);
-
-    const handleDayPress = useCallback(
-        (dateKey: string) => {
-            router.navigate({
-                pathname: '/day',
-                params: { date: dateKey },
-            } as any);
-        },
-        [router],
-    );
+    }, [firstWeekday, i18n.language, selectedDate, workoutStateByDate]);
 
     return (
         <Box style={styles.wrapper}>
@@ -153,32 +201,44 @@ export const WeekStats: FC<WeekStatsProps> = ({ workouts, firstWeekday }) => {
                     ))}
                 </HStack>
                 <HStack style={styles.daysRow}>
-                    {weekDays.map((item) => (
-                        <Box key={item.dateKey} style={styles.dayCell}>
-                            <Pressable
-                                onPress={() => handleDayPress(item.dateKey)}
-                                disabled={!item.isWorkoutDay}
-                            >
-                                <Box
-                                    style={[
-                                        styles.dayCircle,
-                                        item.isWorkoutDay && styles.dayCircleCompleted,
-                                        item.isToday && styles.dayCircleToday,
-                                    ]}
-                                >
-                                    <Text
+                    {weekDays.map((item) => {
+                        const completed = item.hasCompleted;
+                        const planned = item.hasPlanned || item.hasInProgress;
+
+                        return (
+                            <Box key={item.dateKey} style={styles.dayCell}>
+                                <Pressable onPress={() => onSelectDate(item.dateKey)}>
+                                    <Box
                                         style={[
-                                            styles.dayText,
-                                            item.isWorkoutDay && styles.dayTextCompleted,
-                                            item.isToday && styles.dayTextToday,
+                                            styles.dayCircle,
+                                            planned && !completed && styles.dayCirclePlanned,
+                                            completed && styles.dayCircleCompleted,
+                                            item.isToday && styles.dayCircleToday,
+                                            item.isSelected && styles.dayCircleSelected,
                                         ]}
                                     >
-                                        {item.day}
-                                    </Text>
-                                </Box>
-                            </Pressable>
-                        </Box>
-                    ))}
+                                        <Text
+                                            style={[
+                                                styles.dayText,
+                                                completed && styles.dayTextCompleted,
+                                                item.isSelected && styles.dayTextSelected,
+                                            ]}
+                                        >
+                                            {item.day}
+                                        </Text>
+                                        {(planned || completed) && (
+                                            <Box
+                                                style={[
+                                                    styles.indicator,
+                                                    completed && styles.indicatorCompleted,
+                                                ]}
+                                            />
+                                        )}
+                                    </Box>
+                                </Pressable>
+                            </Box>
+                        );
+                    })}
                 </HStack>
             </VStack>
         </Box>
