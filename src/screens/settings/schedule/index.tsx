@@ -1,6 +1,7 @@
 import { FC, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import dayjs from 'dayjs';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ScrollView } from '@/components/primitives/scrollview';
@@ -20,7 +21,7 @@ import {
     parseMonthShiftList,
 } from '@/helpers/planning';
 
-type ScheduleMode = 'week' | 'list' | 'cycle';
+type ScheduleMode = 'week' | 'cycle' | 'dates';
 
 const DAYS = [
     { day: 1, label: 'Понедельник' },
@@ -34,23 +35,8 @@ const DAYS = [
 
 const MODES: Array<{ value: ScheduleMode; label: string }> = [
     { value: 'week', label: 'Неделя' },
-    { value: 'list', label: 'Списком' },
     { value: 'cycle', label: 'Цикл' },
-];
-
-const CYCLE_TEMPLATES = [
-    {
-        label: '2/2',
-        value: '08:00–20:00\n08:00–20:00\n-\n-',
-    },
-    {
-        label: '3/3',
-        value: '08:00–20:00\n08:00–20:00\n08:00–20:00\n-\n-\n-',
-    },
-    {
-        label: 'День / ночь',
-        value: '08:00–20:00\n20:00–08:00\n-\n-',
-    },
+    { value: 'dates', label: 'По датам' },
 ];
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -63,6 +49,30 @@ const styles = StyleSheet.create((theme, rt) => ({
         paddingBottom: rt.insets.bottom + theme.space(8),
         gap: theme.space(5),
     },
+    modeCard: {
+        backgroundColor: theme.colors.background,
+        borderRadius: theme.radius['4xl'],
+        padding: theme.space(2),
+    },
+    modeRow: {
+        gap: theme.space(1),
+    },
+    modeButton: (active: boolean) => ({
+        flex: 1,
+        minHeight: theme.space(10),
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: active ? theme.colors.foreground : 'transparent',
+    }),
+    modeText: (active: boolean) => ({
+        color: theme.colors.typography,
+        opacity: active ? 1 : 0.55,
+        fontSize: theme.fontSize.sm.fontSize,
+        fontWeight: active
+            ? theme.fontWeight.semibold.fontWeight
+            : theme.fontWeight.medium.fontWeight,
+    }),
     section: {
         gap: theme.space(3),
     },
@@ -72,26 +82,12 @@ const styles = StyleSheet.create((theme, rt) => ({
         padding: theme.space(5),
         gap: theme.space(4),
     },
-    modeRow: {
-        gap: theme.space(2),
-    },
-    modeButton: (active: boolean) => ({
-        flex: 1,
-        minHeight: theme.space(11),
-        borderRadius: theme.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: active ? theme.colors.foreground : 'transparent',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.border,
-    }),
-    modeText: (active: boolean) => ({
+    description: {
         color: theme.colors.typography,
-        opacity: active ? 1 : 0.62,
-        fontWeight: active
-            ? theme.fontWeight.semibold.fontWeight
-            : theme.fontWeight.medium.fontWeight,
-    }),
+        opacity: 0.55,
+        fontSize: theme.fontSize.sm.fontSize,
+        lineHeight: theme.fontSize.sm.lineHeight,
+    },
     day: {
         gap: theme.space(2),
         paddingVertical: theme.space(1),
@@ -159,6 +155,26 @@ const styles = StyleSheet.create((theme, rt) => ({
         fontSize: theme.fontSize.default.fontSize,
         textAlignVertical: 'top',
     },
+    monthHeader: {
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: theme.space(3),
+    },
+    monthButton: {
+        width: theme.space(10),
+        height: theme.space(10),
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.foreground,
+    },
+    monthTitle: {
+        flex: 1,
+        textAlign: 'center',
+        color: theme.colors.typography,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+        textTransform: 'capitalize',
+    },
     hint: {
         color: theme.colors.typography,
         opacity: 0.5,
@@ -170,6 +186,24 @@ const styles = StyleSheet.create((theme, rt) => ({
         fontSize: theme.fontSize.sm.fontSize,
     },
 }));
+
+const shiftToLine = (shift: WorkShift | null | undefined): string => {
+    if (shift === null) return '-';
+    if (!shift) return '';
+    return `${shift.start}–${shift.end}`;
+};
+
+const monthOverridesToRaw = (
+    month: string,
+    overrides: Record<string, WorkShift | null>,
+): string => {
+    const daysInMonth = dayjs(`${month}-01`).daysInMonth();
+
+    return Array.from({ length: daysInMonth }, (_, index) => {
+        const dateKey = `${month}-${String(index + 1).padStart(2, '0')}`;
+        return shiftToLine(overrides[dateKey]);
+    }).join('\n');
+};
 
 const WorkScheduleScreen: FC = () => {
     const { theme } = useUnistyles();
@@ -190,21 +224,27 @@ const WorkScheduleScreen: FC = () => {
 
         if (config.cycle) {
             setCycleStart(config.cycle.startDate);
-            setCycleRaw(
-                config.cycle.days
-                    .map((shift) => (shift ? shift.start + '–' + shift.end : '-'))
-                    .join('\n'),
-            );
+            setCycleRaw(config.cycle.days.map(shiftToLine).join('\n'));
+        } else {
+            setCycleRaw('');
         }
-    }, [config.cycle, config.weekly]);
+
+        setMonthRaw(monthOverridesToRaw(month, config.overrides));
+    }, [config, month]);
 
     const monthPreview = useMemo(
         () => parseMonthShiftList(month, monthRaw),
         [month, monthRaw],
     );
+
     const cyclePreview = useMemo(
         () => parseCycleShiftList(cycleRaw),
         [cycleRaw],
+    );
+
+    const monthLabel = useMemo(
+        () => dayjs(`${month}-01`).format('MMMM YYYY'),
+        [month],
     );
 
     const setWeeklyKind = (
@@ -220,10 +260,7 @@ const WorkScheduleScreen: FC = () => {
                 next[String(day)] = null;
             } else {
                 next[String(day)] =
-                    next[String(day)] ?? {
-                        start: '08:00',
-                        end: '17:00',
-                    };
+                    next[String(day)] ?? { start: '08:00', end: '17:00' };
             }
 
             return next;
@@ -238,25 +275,10 @@ const WorkScheduleScreen: FC = () => {
         setWeekly((current) => ({
             ...current,
             [String(day)]: {
-                ...(current[String(day)] || {
-                    start: '08:00',
-                    end: '17:00',
-                }),
+                ...(current[String(day)] || { start: '08:00', end: '17:00' }),
                 [field]: value,
             },
         }));
-    };
-
-    const applyFiveTwo = () => {
-        setWeekly({
-            '1': { start: '08:00', end: '17:00' },
-            '2': { start: '08:00', end: '17:00' },
-            '3': { start: '08:00', end: '17:00' },
-            '4': { start: '08:00', end: '17:00' },
-            '5': { start: '08:00', end: '17:00' },
-            '6': null,
-            '0': null,
-        });
     };
 
     const saveWeekly = async () => {
@@ -279,7 +301,7 @@ const WorkScheduleScreen: FC = () => {
 
         const overrides = Object.fromEntries(
             Object.entries(config.overrides).filter(
-                ([date]) => !date.startsWith(month + '-'),
+                ([date]) => !date.startsWith(`${month}-`),
             ),
         );
 
@@ -291,7 +313,7 @@ const WorkScheduleScreen: FC = () => {
             },
         });
 
-        Alert.alert('Сохранено', 'График месяца импортирован.');
+        Alert.alert('Сохранено', 'График месяца обновлён.');
     };
 
     const saveCycle = async () => {
@@ -325,17 +347,23 @@ const WorkScheduleScreen: FC = () => {
         });
     };
 
+    const changeMonth = (delta: number) => {
+        setMonth((current) =>
+            dayjs(`${current}-01`)
+                .add(delta, 'month')
+                .format('YYYY-MM'),
+        );
+    };
+
     return (
         <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}
         >
-            <VStack style={styles.section}>
-                <Label>Как заполнить</Label>
-
+            <VStack style={styles.modeCard}>
                 <HStack style={styles.modeRow}>
                     {MODES.map((item) => {
-                        const active = mode === item.value;
+                        const active = item.value === mode;
 
                         return (
                             <Pressable
@@ -354,33 +382,25 @@ const WorkScheduleScreen: FC = () => {
 
             {mode === 'week' && (
                 <VStack style={styles.section}>
-                    <HStack
-                        style={{
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                        }}
-                    >
-                        <Label>По дням недели</Label>
-                        <Button
-                            type="link"
-                            size="sm"
-                            title="5/2"
-                            onPress={applyFiveTwo}
-                        />
-                    </HStack>
-
+                    <Label>Обычная неделя</Label>
                     <VStack style={styles.card}>
+                        <Text style={styles.description}>
+                            Для постоянного графика: 5/2, фиксированные смены по
+                            дням недели или разные часы в каждый день.
+                        </Text>
+
                         {DAYS.map(({ day, label }) => {
                             const has = Object.prototype.hasOwnProperty.call(
                                 weekly,
                                 String(day),
                             );
                             const shift = weekly[String(day)];
-                            const kind = !has
-                                ? 'unknown'
-                                : shift === null
-                                  ? 'off'
-                                  : 'work';
+                            const kind =
+                                !has
+                                    ? 'unknown'
+                                    : shift === null
+                                      ? 'off'
+                                      : 'work';
 
                             return (
                                 <VStack key={day} style={styles.day}>
@@ -465,73 +485,14 @@ const WorkScheduleScreen: FC = () => {
                 </VStack>
             )}
 
-            {mode === 'list' && (
-                <VStack style={styles.section}>
-                    <Label>Вставить месяц списком</Label>
-
-                    <VStack style={styles.card}>
-                        <Input
-                            value={month}
-                            onChangeText={setMonth}
-                            placeholder="2026-10"
-                            style={styles.input}
-                        />
-
-                        <Text style={styles.hint}>
-                            Одна строка — один день месяца. Например:
-                            08:00–17:00, 15:00–00:00 или «-» для выходного.
-                        </Text>
-
-                        <Input
-                            value={monthRaw}
-                            onChangeText={setMonthRaw}
-                            multiline
-                            placeholder={
-                                '08:00–17:00\n08:00–17:00\n-\n15:00–00:00'
-                            }
-                            style={styles.textarea}
-                        />
-
-                        {monthPreview.warnings.length > 0 && (
-                            <Text style={styles.warning}>
-                                Не распознано строк:{' '}
-                                {monthPreview.warnings.length}
-                            </Text>
-                        )}
-
-                        <Button
-                            title="Сохранить месяц"
-                            loading={saveSchedule.isPending}
-                            onPress={saveMonth}
-                        />
-                    </VStack>
-                </VStack>
-            )}
-
             {mode === 'cycle' && (
                 <VStack style={styles.section}>
                     <Label>Повторяющийся цикл</Label>
-
-                    <HStack style={styles.chips}>
-                        {CYCLE_TEMPLATES.map((template) => (
-                            <Pressable
-                                key={template.label}
-                                onPress={() => setCycleRaw(template.value)}
-                            >
-                                <Box style={styles.chip(false)}>
-                                    <Text style={styles.chipText(false)}>
-                                        {template.label}
-                                    </Text>
-                                </Box>
-                            </Pressable>
-                        ))}
-                    </HStack>
-
                     <VStack style={styles.card}>
-                        <Text style={styles.hint}>
-                            Подходит для 2/2, 3/3, день/ночь и любого
-                            повторяющегося графика. Первая строка действует
-                            с указанной даты.
+                        <Text style={styles.description}>
+                            Для 2/2, 3/3, день/ночь/выходные и любого другого
+                            повторяющегося графика. Первая строка относится к
+                            дате начала цикла.
                         </Text>
 
                         <Input
@@ -545,9 +506,7 @@ const WorkScheduleScreen: FC = () => {
                             value={cycleRaw}
                             onChangeText={setCycleRaw}
                             multiline
-                            placeholder={
-                                '08:00–20:00\n08:00–20:00\n-\n-'
-                            }
+                            placeholder={'08:00–20:00\n08:00–20:00\n-\n-'}
                             style={styles.textarea}
                         />
 
@@ -575,10 +534,69 @@ const WorkScheduleScreen: FC = () => {
                 </VStack>
             )}
 
+            {mode === 'dates' && (
+                <VStack style={styles.section}>
+                    <Label>Конкретные даты</Label>
+                    <VStack style={styles.card}>
+                        <Text style={styles.description}>
+                            Для плавающего графика. Одна строка — один день
+                            месяца: смена вида 08:00–17:00, «-» для выходного,
+                            пустая строка — день не указан.
+                        </Text>
+
+                        <HStack style={styles.monthHeader}>
+                            <Pressable
+                                style={styles.monthButton}
+                                onPress={() => changeMonth(-1)}
+                            >
+                                <ChevronLeft
+                                    size={theme.space(5)}
+                                    color={theme.colors.typography}
+                                />
+                            </Pressable>
+
+                            <Text style={styles.monthTitle}>
+                                {monthLabel}
+                            </Text>
+
+                            <Pressable
+                                style={styles.monthButton}
+                                onPress={() => changeMonth(1)}
+                            >
+                                <ChevronRight
+                                    size={theme.space(5)}
+                                    color={theme.colors.typography}
+                                />
+                            </Pressable>
+                        </HStack>
+
+                        <Input
+                            value={monthRaw}
+                            onChangeText={setMonthRaw}
+                            multiline
+                            placeholder={'08:00–17:00\n08:00–17:00\n-\n15:00–00:00'}
+                            style={styles.textarea}
+                        />
+
+                        {monthPreview.warnings.length > 0 && (
+                            <Text style={styles.warning}>
+                                Не распознано строк:{' '}
+                                {monthPreview.warnings.length}
+                            </Text>
+                        )}
+
+                        <Button
+                            title="Сохранить месяц"
+                            loading={saveSchedule.isPending}
+                            onPress={saveMonth}
+                        />
+                    </VStack>
+                </VStack>
+            )}
+
             <Text style={styles.hint}>
-                Конкретные даты из списка имеют приоритет над циклом, а цикл —
-                над шаблоном недели. Неуказанный день считается неизвестным,
-                а не выходным.
+                Приоритет: конкретная дата → повторяющийся цикл → обычная
+                неделя. Неуказанный день считается неизвестным, а не выходным.
             </Text>
         </ScrollView>
     );
