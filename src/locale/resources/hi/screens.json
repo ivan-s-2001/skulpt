@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "होम",
+        "title": "शेड्यूल",
         "planned": "नियोजित वर्कआउट",
         "workoutsCount_one": "{{count}} वर्कआउट",
         "workoutsCount_other": "{{count}} वर्कआउट्स",
