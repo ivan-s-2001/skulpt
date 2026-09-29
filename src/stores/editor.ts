@@ -13,6 +13,9 @@ type ExerciseEdit = {
 
 type WorkoutCreate = {
     type: 'workout__create';
+    payload?: {
+        startAt?: Date;
+    };
 };
 
 type WorkoutEdit = {
