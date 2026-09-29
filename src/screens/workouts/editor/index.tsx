@@ -157,7 +157,7 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) =>
             startAt: toDate(existingWorkout?.startAt ?? initialStartAt ?? null),
             startedAt: toDate(existingWorkout?.startedAt ?? null),
             completedAt: toDate(existingWorkout?.completedAt ?? null),
-            remind: existingWorkout?.remind ?? null,
+            remind: existingWorkout?.remind ?? (initialStartAt ? '30m' : null),
         },
     });
 
