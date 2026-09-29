@@ -13,7 +13,7 @@ CREATE TABLE `trainer` (
     `user_id` text NOT NULL,
     `name` text NOT NULL,
     `color` text DEFAULT '#a3e635' NOT NULL,
-    `schedule_json` text DEFAULT '{}' NOT NULL,
+    `schedule_json` text DEFAULT '[]' NOT NULL,
     `created_at` integer DEFAULT (strftime('%s','now') * 1000) NOT NULL,
     `updated_at` integer DEFAULT (strftime('%s','now') * 1000) NOT NULL
 );
