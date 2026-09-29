@@ -372,7 +372,7 @@ const WorkScheduleScreen: FC = () => {
             },
         });
 
-        Alert.alert('Сохранено', 'График месяца обновлён.');
+        offerSubscriptionReplan('График месяца обновлён.');
     };
 
     const saveCycle = async () => {
