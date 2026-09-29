@@ -1,21 +1,19 @@
 import { FC, useCallback, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { router } from 'expo-router';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Dumbbell, UserRound } from 'lucide-react-native';
 
 import { Title } from '@/components/typography/title';
 import { ScrollView } from '@/components/primitives/scrollview';
-import { Box } from '@/components/primitives/box';
 import { VStack } from '@/components/primitives/vstack';
 import { HStack } from '@/components/primitives/hstack';
 import { Text } from '@/components/primitives/text';
-import { Pressable } from '@/components/primitives/pressable';
 import { Label } from '@/components/forms/label';
 import { Button } from '@/components/buttons/base';
 import { useEditor } from '@/hooks/use-editor';
 import { useWorkouts } from '@/hooks/use-workouts';
+import { WorkoutCard } from '@/screens/home/components/workout-card';
 
 const styles = StyleSheet.create((theme, rt) => ({
     container: {
@@ -36,66 +34,26 @@ const styles = StyleSheet.create((theme, rt) => ({
         padding: theme.space(5),
         gap: theme.space(4),
     },
-    heroHeader: {
-        alignItems: 'center',
-        gap: theme.space(3),
-    },
-    iconContainer: {
-        width: theme.space(11),
-        height: theme.space(11),
-        borderRadius: theme.radius.xl,
-        backgroundColor: theme.colors.foreground,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    heroText: {
-        flex: 1,
-        gap: theme.space(1),
-    },
-    heroTitle: {
+    title: {
         color: theme.colors.typography,
         fontSize: theme.fontSize.lg.fontSize,
         fontWeight: theme.fontWeight.bold.fontWeight,
     },
-    heroDescription: {
+    description: {
         color: theme.colors.typography,
         opacity: 0.55,
         fontSize: theme.fontSize.sm.fontSize,
         lineHeight: theme.fontSize.sm.lineHeight,
     },
-    list: {
-        backgroundColor: theme.colors.background,
-        borderRadius: theme.radius['4xl'],
-        overflow: 'hidden',
-    },
-    row: {
-        minHeight: theme.space(16),
-        alignItems: 'center',
-        paddingHorizontal: theme.space(5),
-        gap: theme.space(3),
-    },
-    rowContent: {
-        flex: 1,
-        gap: theme.space(0.5),
-    },
-    rowTitle: {
-        color: theme.colors.typography,
-        fontWeight: theme.fontWeight.medium.fontWeight,
-    },
-    rowSubtitle: {
-        color: theme.colors.typography,
-        opacity: 0.5,
-        fontSize: theme.fontSize.sm.fontSize,
-    },
-    divider: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: theme.colors.border,
-        marginLeft: theme.space(5),
+    workouts: {
+        gap: theme.space(2),
     },
     empty: {
         padding: theme.space(5),
         gap: theme.space(2),
         alignItems: 'center',
+        backgroundColor: theme.colors.background,
+        borderRadius: theme.radius['4xl'],
     },
     emptyTitle: {
         color: theme.colors.typography,
@@ -118,18 +76,19 @@ const styles = StyleSheet.create((theme, rt) => ({
 }));
 
 const PlanScreen: FC = () => {
-    const { t, i18n } = useTranslation(['screens']);
-    const { theme } = useUnistyles();
+    const { t } = useTranslation(['screens']);
     const { navigate } = useEditor();
     const { data: workouts = [] } = useWorkouts();
 
     const plannedSolo = useMemo(
         () =>
             workouts
-                .filter((workout) => {
-                    if (workout.status !== 'planned' || !workout.startAt) return false;
-                    return dayjs(workout.startAt).isAfter(dayjs().startOf('day'));
-                })
+                .filter(
+                    (workout) =>
+                        workout.status === 'planned' &&
+                        workout.startAt &&
+                        dayjs(workout.startAt).isAfter(dayjs().startOf('day')),
+                )
                 .sort(
                     (a, b) =>
                         new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime(),
@@ -149,23 +108,12 @@ const PlanScreen: FC = () => {
             <VStack style={styles.section}>
                 <Label>{t('plan.subscription.section', { ns: 'screens' })}</Label>
                 <VStack style={styles.card}>
-                    <HStack style={styles.heroHeader}>
-                        <Box style={styles.iconContainer}>
-                            <UserRound
-                                size={theme.space(6)}
-                                color={theme.colors.typography}
-                                strokeWidth={1.8}
-                            />
-                        </Box>
-                        <VStack style={styles.heroText}>
-                            <Text style={styles.heroTitle}>
-                                {t('plan.subscription.title', { ns: 'screens' })}
-                            </Text>
-                            <Text style={styles.heroDescription}>
-                                {t('plan.subscription.emptyDescription', { ns: 'screens' })}
-                            </Text>
-                        </VStack>
-                    </HStack>
+                    <Text style={styles.title}>
+                        {t('plan.subscription.title', { ns: 'screens' })}
+                    </Text>
+                    <Text style={styles.description}>
+                        {t('plan.subscription.emptyDescription', { ns: 'screens' })}
+                    </Text>
                     <Button
                         title={t('plan.subscription.action', { ns: 'screens' })}
                         onPress={() => router.navigate('/plan/subscription' as any)}
@@ -184,50 +132,27 @@ const PlanScreen: FC = () => {
                     />
                 </HStack>
 
-                <VStack style={styles.list}>
-                    {plannedSolo.length ? (
-                        plannedSolo.map((workout, index) => {
-                            const date = dayjs(workout.startAt)
-                                .locale(i18n.language)
-                                .format('ddd, D MMM · HH:mm');
-
-                            return (
-                                <VStack key={workout.id}>
-                                    <Pressable onPress={() => router.navigate(`/workout/${workout.id}`)}>
-                                        <HStack style={styles.row}>
-                                            <Box style={styles.iconContainer}>
-                                                <Dumbbell
-                                                    size={theme.space(5)}
-                                                    color={theme.colors.typography}
-                                                    strokeWidth={1.8}
-                                                />
-                                            </Box>
-                                            <VStack style={styles.rowContent}>
-                                                <Text style={styles.rowTitle}>{workout.name}</Text>
-                                                <Text style={styles.rowSubtitle}>{date}</Text>
-                                            </VStack>
-                                            <ChevronRight
-                                                size={theme.space(5)}
-                                                color={theme.colors.typography}
-                                                opacity={0.45}
-                                            />
-                                        </HStack>
-                                    </Pressable>
-                                    {index < plannedSolo.length - 1 && <Box style={styles.divider} />}
-                                </VStack>
-                            );
-                        })
-                    ) : (
-                        <VStack style={styles.empty}>
-                            <Text style={styles.emptyTitle}>
-                                {t('plan.solo.emptyTitle', { ns: 'screens' })}
-                            </Text>
-                            <Text style={styles.emptyDescription}>
-                                {t('plan.solo.emptyDescription', { ns: 'screens' })}
-                            </Text>
-                        </VStack>
-                    )}
-                </VStack>
+                {plannedSolo.length ? (
+                    <VStack style={styles.workouts}>
+                        {plannedSolo.map((workout) => (
+                            <WorkoutCard
+                                key={workout.id}
+                                workout={workout}
+                                onPress={(id) => router.navigate(`/workout/${id}`)}
+                                activeElapsedFormatted={null}
+                            />
+                        ))}
+                    </VStack>
+                ) : (
+                    <VStack style={styles.empty}>
+                        <Text style={styles.emptyTitle}>
+                            {t('plan.solo.emptyTitle', { ns: 'screens' })}
+                        </Text>
+                        <Text style={styles.emptyDescription}>
+                            {t('plan.solo.emptyDescription', { ns: 'screens' })}
+                        </Text>
+                    </VStack>
+                )}
             </VStack>
 
             <Text style={styles.note}>{t('plan.note', { ns: 'screens' })}</Text>
