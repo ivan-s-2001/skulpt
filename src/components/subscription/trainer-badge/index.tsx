@@ -9,6 +9,8 @@ interface TrainerBadgeProps {
     name: string;
     color: string;
     subtle?: boolean;
+    onAccent?: boolean;
+    prefix?: string;
 }
 
 const styles = StyleSheet.create((theme) => ({
@@ -16,31 +18,36 @@ const styles = StyleSheet.create((theme) => ({
         alignSelf: 'flex-start',
         alignItems: 'center',
         gap: theme.space(1.5),
-        minHeight: theme.space(8),
-        paddingHorizontal: theme.space(3),
+        minHeight: subtle ? undefined : theme.space(8),
+        paddingHorizontal: subtle ? 0 : theme.space(3),
         borderRadius: theme.radius.full,
         backgroundColor: subtle ? 'transparent' : theme.colors.foreground,
     }),
     dot: (color: string) => ({
-        width: theme.space(2.5),
-        height: theme.space(2.5),
+        width: theme.space(2),
+        height: theme.space(2),
         borderRadius: theme.radius.full,
         backgroundColor: color,
     }),
-    label: {
-        color: theme.colors.typography,
+    label: (onAccent: boolean) => ({
+        color: onAccent ? theme.colors.neutral[950] : theme.colors.typography,
+        opacity: onAccent ? 0.82 : 0.64,
         fontSize: theme.fontSize.sm.fontSize,
-        fontWeight: theme.fontWeight.semibold.fontWeight,
-    },
+        fontWeight: theme.fontWeight.medium.fontWeight,
+    }),
 }));
 
 export const TrainerBadge: FC<TrainerBadgeProps> = ({
     name,
     color,
-    subtle = false,
+    subtle = true,
+    onAccent = false,
+    prefix = 'Тренер ·',
 }) => (
     <HStack style={styles.container(subtle)}>
         <Box style={styles.dot(color)} />
-        <Text style={styles.label}>{name}</Text>
+        <Text style={styles.label(onAccent)}>
+            {prefix ? `${prefix} ${name}` : name}
+        </Text>
     </HStack>
 );
