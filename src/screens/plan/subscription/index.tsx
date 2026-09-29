@@ -25,7 +25,6 @@ import {
 } from '@/hooks/use-planning';
 import { useWorkouts } from '@/hooks/use-workouts';
 import { buildTrainerPlans } from '@/helpers/trainer-planner';
-import { TrainerBadge } from '@/components/subscription/trainer-badge';
 import { SubscriptionProgressCard } from '@/components/subscription/progress-card';
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -234,7 +233,6 @@ const SubscriptionScreen: FC = () => {
             (item) => item.attendance === 'attended' || item.status === 'completed',
         ).length;
         const missed = courseWorkouts.filter((item) => item.attendance === 'missed').length;
-        const remaining = Math.max(0, active.subscription.targetSessions - attended);
         const planned = courseWorkouts.filter(
             (item) =>
                 item.attendance !== 'missed' &&
