@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "होम"
+        "title": "शेड्यूल"
+    },
+    "plan": {
+        "title": "प्लान"
     },
     "results": {
-        "title": "परिणाम"
+        "title": "प्रगति"
     },
     "exercises": {
         "title": "एक्सरसाइज"
