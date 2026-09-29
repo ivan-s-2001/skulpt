@@ -17,7 +17,6 @@ import { Pushes } from '@/components/promo/pushes';
 import { getWorkoutDateKey } from '@/helpers/workouts';
 import { useTrainers, useWorkSchedule } from '@/hooks/use-planning';
 import { EMPTY_WORK_SCHEDULE, resolveWorkShift } from '@/helpers/planning';
-import { Button } from '@/components/buttons/base';
 import { useEditor } from '@/hooks/use-editor';
 
 import { WorkoutCard } from '../workout-card';
