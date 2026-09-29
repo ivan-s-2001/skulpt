@@ -7,6 +7,7 @@ import {
     getActiveSubscription,
     getTrainers,
     getWorkSchedule,
+    rebuildFutureSubscriptionPlan,
     saveWorkSchedule,
     setSubscriptionWorkoutAttendance,
     updateTrainer,
@@ -71,6 +72,7 @@ export const useSaveWorkSchedule = () => {
         mutationFn: saveWorkSchedule,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'work-schedule'] });
+            queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
         },
     });
 };
@@ -104,6 +106,19 @@ export const useSetSubscriptionWorkoutAttendance = () => {
             workoutId: string;
             attendance: 'attended' | 'missed';
         }) => setSubscriptionWorkoutAttendance(workoutId, attendance),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+            queryClient.invalidateQueries({ queryKey: ['workouts'] });
+        },
+    });
+};
+
+
+export const useRebuildSubscriptionPlan = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: rebuildFutureSubscriptionPlan,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
             queryClient.invalidateQueries({ queryKey: ['workouts'] });
