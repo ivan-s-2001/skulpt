@@ -118,7 +118,8 @@ export const useRebuildSubscriptionPlan = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: rebuildFutureSubscriptionPlan,
+        mutationFn: (subscriptionId: string) =>
+            rebuildFutureSubscriptionPlan(subscriptionId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
             queryClient.invalidateQueries({ queryKey: ['workouts'] });
