@@ -34,6 +34,7 @@ import { reportError, runInBackground } from '@/services/error-reporting';
 
 interface WorkoutEditorProps {
     workoutId?: string;
+    initialStartAt?: Date;
 }
 
 const category = [
@@ -93,7 +94,7 @@ const styles = StyleSheet.create((theme) => ({
 
 // Wrapper that waits for data to load before mounting the form.
 // This eliminates the race condition between reset() and status useEffect.
-const Editor: FC<WorkoutEditorProps> = ({ workoutId }) => {
+const Editor: FC<WorkoutEditorProps> = ({ workoutId, initialStartAt }) => {
     const isEdit = Boolean(workoutId);
     const { data: existingWorkout, isLoading } = useWorkout(workoutId || '');
 
@@ -101,11 +102,17 @@ const Editor: FC<WorkoutEditorProps> = ({ workoutId }) => {
         return null;
     }
 
-    return <EditorForm existingWorkout={isEdit ? existingWorkout : undefined} />;
+    return (
+        <EditorForm
+            existingWorkout={isEdit ? existingWorkout : undefined}
+            initialStartAt={initialStartAt}
+        />
+    );
 };
 
 interface EditorFormProps {
     existingWorkout?: WorkoutSelect | null;
+    initialStartAt?: Date;
 }
 
 const toDate = (v: Date | null) => {
@@ -113,10 +120,12 @@ const toDate = (v: Date | null) => {
     return v instanceof Date ? v : new Date(v);
 };
 
-const EditorForm: FC<EditorFormProps> = ({ existingWorkout }) => {
+const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) => {
     const { user } = useUser();
     const { t } = useTranslation(['common', 'screens']);
-    const [startDate, setStartDate] = useState(Boolean(existingWorkout?.startAt));
+    const [startDate, setStartDate] = useState(
+        Boolean(existingWorkout?.startAt || initialStartAt),
+    );
     const { track } = useAnalytics();
     const { startWorkout } = useRunningWorkoutStatic();
 
@@ -145,7 +154,7 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout }) => {
         defaultValues: {
             name: existingWorkout?.name ?? '',
             status: existingWorkout?.status ?? 'planned',
-            startAt: toDate(existingWorkout?.startAt ?? null),
+            startAt: toDate(existingWorkout?.startAt ?? initialStartAt ?? null),
             startedAt: toDate(existingWorkout?.startedAt ?? null),
             completedAt: toDate(existingWorkout?.completedAt ?? null),
             remind: existingWorkout?.remind ?? null,
@@ -160,7 +169,7 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout }) => {
     /* eslint-enable react-hooks/incompatible-library */
 
     // Skip the first run in edit mode — defaultValues already have the correct data
-    const isFirstRun = useRef(isEdit);
+    const isFirstRun = useRef(isEdit || Boolean(initialStartAt));
 
     useEffect(() => {
         if (isFirstRun.current) {
