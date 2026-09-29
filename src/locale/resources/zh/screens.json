@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "首页",
+        "title": "日程",
         "planned": "已安排的训练",
         "workoutsCount_other": "{{count}} 次训练",
         "empty": {
