@@ -13,7 +13,12 @@ import { Pressable } from '@/components/primitives/pressable';
 import { Input } from '@/components/primitives/input';
 import { Button } from '@/components/buttons/base';
 import { Label } from '@/components/forms/label';
-import { useSaveWorkSchedule, useWorkSchedule } from '@/hooks/use-planning';
+import {
+    useActiveSubscription,
+    useRebuildSubscriptionPlan,
+    useSaveWorkSchedule,
+    useWorkSchedule,
+} from '@/hooks/use-planning';
 import {
     EMPTY_WORK_SCHEDULE,
     WorkShift,
@@ -208,7 +213,9 @@ const monthOverridesToRaw = (
 const WorkScheduleScreen: FC = () => {
     const { theme } = useUnistyles();
     const { data } = useWorkSchedule();
+    const { data: activeSubscription } = useActiveSubscription();
     const saveSchedule = useSaveWorkSchedule();
+    const rebuildSubscription = useRebuildSubscriptionPlan();
 
     const config = data?.config ?? EMPTY_WORK_SCHEDULE;
 
@@ -231,6 +238,58 @@ const WorkScheduleScreen: FC = () => {
 
         setMonthRaw(monthOverridesToRaw(month, config.overrides));
     }, [config, month]);
+
+    const showReplanResult = (
+        result: Awaited<ReturnType<typeof rebuildSubscription.mutateAsync>>,
+    ) => {
+        if (result.reason === 'replanned') {
+            Alert.alert(
+                'Расписание обновлено',
+                'Будущие занятия абонемента перестроены.',
+            );
+            return;
+        }
+
+        if (result.reason === 'no_full_plan') {
+            Alert.alert(
+                'Текущий план сохранён',
+                'Полный новый вариант пока не помещается в доступные даты.',
+            );
+            return;
+        }
+
+        Alert.alert(
+            'Расписание актуально',
+            'Будущие занятия уже подходят под новый график.',
+        );
+    };
+
+    const offerSubscriptionReplan = (savedMessage: string) => {
+        if (!activeSubscription) {
+            Alert.alert('Сохранено', savedMessage);
+            return;
+        }
+
+        Alert.alert(
+            'График сохранён',
+            savedMessage + '\n\nПроверить будущие занятия абонемента?',
+            [
+                {
+                    text: 'Позже',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Перестроить',
+                    onPress: async () => {
+                        const result = await rebuildSubscription.mutateAsync(
+                            activeSubscription.subscription.id,
+                        );
+                        showReplanResult(result);
+                    },
+                },
+            ],
+        );
+    };
 
     const monthPreview = useMemo(
         () => parseMonthShiftList(month, monthRaw),
@@ -287,7 +346,7 @@ const WorkScheduleScreen: FC = () => {
             weekly,
         });
 
-        Alert.alert('Сохранено', 'Недельный график обновлён.');
+        offerSubscriptionReplan('Недельный график обновлён.');
     };
 
     const saveMonth = async () => {
@@ -335,7 +394,7 @@ const WorkScheduleScreen: FC = () => {
             },
         });
 
-        Alert.alert('Сохранено', 'Повторяющийся цикл обновлён.');
+        offerSubscriptionReplan('Повторяющийся цикл обновлён.');
     };
 
     const clearCycle = async () => {
@@ -345,6 +404,8 @@ const WorkScheduleScreen: FC = () => {
             ...config,
             cycle: null,
         });
+
+        offerSubscriptionReplan('Повторяющийся цикл отключён.');
     };
 
     const changeMonth = (delta: number) => {
