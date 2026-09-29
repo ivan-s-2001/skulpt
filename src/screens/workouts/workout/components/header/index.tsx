@@ -11,7 +11,7 @@ import { Text } from '@/components/primitives/text';
 import { VStack } from '@/components/primitives/vstack';
 import { useSupersetEditStore } from '@/stores/superset-edit';
 import { useTrainers } from '@/hooks/use-planning';
-import { TrainerBadge } from '@/components/planning/trainer-badge';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 const styles = StyleSheet.create((theme) => ({
     container: {
