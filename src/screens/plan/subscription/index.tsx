@@ -1,4 +1,5 @@
 import { FC, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 import dayjs from 'dayjs';
 import { router } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -418,7 +419,30 @@ const SubscriptionScreen: FC = () => {
                     title="Перестроить будущие занятия"
                     loading={rebuildSubscription.isPending}
                     onPress={() =>
-                        rebuildSubscription.mutate(active.subscription.id)
+                        rebuildSubscription.mutate(active.subscription.id, {
+                            onSuccess: (result) => {
+                                if (result.reason === 'replanned') {
+                                    Alert.alert(
+                                        'Расписание обновлено',
+                                        'Будущие занятия перестроены под текущий график.',
+                                    );
+                                    return;
+                                }
+
+                                if (result.reason === 'no_full_plan') {
+                                    Alert.alert(
+                                        'Не удалось перестроить',
+                                        'Полный новый вариант пока не помещается в доступные даты. Текущее расписание оставлено без изменений.',
+                                    );
+                                    return;
+                                }
+
+                                Alert.alert(
+                                    'Расписание актуально',
+                                    'Будущие занятия уже подходят под текущие ограничения.',
+                                );
+                            },
+                        })
                     }
                 />
                 <Button
