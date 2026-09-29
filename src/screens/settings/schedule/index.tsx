@@ -44,6 +44,32 @@ const MODES: Array<{ value: ScheduleMode; label: string }> = [
     { value: 'dates', label: 'По датам' },
 ];
 
+const CYCLE_PRESETS = [
+    {
+        label: '2/2',
+        lines: ['08:00–20:00', '08:00–20:00', '-', '-'],
+    },
+    {
+        label: '3/3',
+        lines: [
+            '08:00–20:00',
+            '08:00–20:00',
+            '08:00–20:00',
+            '-',
+            '-',
+            '-',
+        ],
+    },
+    {
+        label: 'День/ночь/2',
+        lines: ['08:00–20:00', '20:00–08:00', '-', '-'],
+    },
+    {
+        label: 'Сутки/трое',
+        lines: ['08:00–08:00', '-', '-', '-'],
+    },
+] as const;
+
 const styles = StyleSheet.create((theme, rt) => ({
     container: {
         flex: 1,
@@ -340,6 +366,23 @@ const WorkScheduleScreen: FC = () => {
         }));
     };
 
+    const applyFiveTwoPreset = () => {
+        setWeekly({
+            '1': { start: '08:00', end: '17:00' },
+            '2': { start: '08:00', end: '17:00' },
+            '3': { start: '08:00', end: '17:00' },
+            '4': { start: '08:00', end: '17:00' },
+            '5': { start: '08:00', end: '17:00' },
+            '6': null,
+            '0': null,
+        });
+    };
+
+    const applyCyclePreset = (lines: readonly string[]) => {
+        setCycleStart(dayjs().format('YYYY-MM-DD'));
+        setCycleRaw(lines.join('\n'));
+    };
+
     const saveWeekly = async () => {
         await saveSchedule.mutateAsync({
             ...config,
@@ -450,6 +493,13 @@ const WorkScheduleScreen: FC = () => {
                             дням недели или разные часы в каждый день.
                         </Text>
 
+                        <Button
+                            type="link"
+                            size="sm"
+                            title="Заполнить 5/2"
+                            onPress={applyFiveTwoPreset}
+                        />
+
                         {DAYS.map(({ day, label }) => {
                             const has = Object.prototype.hasOwnProperty.call(
                                 weekly,
@@ -555,6 +605,21 @@ const WorkScheduleScreen: FC = () => {
                             повторяющегося графика. Первая строка относится к
                             дате начала цикла.
                         </Text>
+
+                        <HStack style={styles.chips}>
+                            {CYCLE_PRESETS.map((preset) => (
+                                <Pressable
+                                    key={preset.label}
+                                    onPress={() => applyCyclePreset(preset.lines)}
+                                >
+                                    <Box style={styles.chip(false)}>
+                                        <Text style={styles.chipText(false)}>
+                                            {preset.label}
+                                        </Text>
+                                    </Box>
+                                </Pressable>
+                            ))}
+                        </HStack>
 
                         <Input
                             value={cycleStart}
