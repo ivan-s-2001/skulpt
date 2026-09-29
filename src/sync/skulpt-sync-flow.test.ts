@@ -105,6 +105,18 @@ jest.mock('@/db/schema', () => ({
         __name: 'user',
         id: 'user.id',
     },
+    trainer: {
+        __name: 'trainer',
+        id: 'trainer.id',
+    },
+    subscription: {
+        __name: 'subscription',
+        id: 'subscription.id',
+    },
+    workSchedule: {
+        __name: 'work_schedule',
+        userId: 'work_schedule.user_id',
+    },
     workout: {
         __name: 'workout',
         id: 'workout.id',
