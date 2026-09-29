@@ -43,14 +43,6 @@ const styles = StyleSheet.create((theme, rt) => ({
         padding: theme.space(5),
         gap: theme.space(4),
     },
-    heroHeader: {
-        alignItems: 'center',
-        gap: theme.space(3),
-    },
-    heroContent: {
-        flex: 1,
-        gap: theme.space(1),
-    },
     title: {
         color: theme.colors.typography,
         fontSize: theme.fontSize.xl.fontSize,
@@ -61,9 +53,6 @@ const styles = StyleSheet.create((theme, rt) => ({
         opacity: 0.55,
         fontSize: theme.fontSize.sm.fontSize,
         lineHeight: theme.fontSize.sm.lineHeight,
-    },
-    metricGrid: {
-        gap: theme.space(2),
     },
     metricRow: {
         justifyContent: 'space-between',
@@ -78,18 +67,6 @@ const styles = StyleSheet.create((theme, rt) => ({
         color: theme.colors.typography,
         fontWeight: theme.fontWeight.semibold.fontWeight,
     },
-    progressTrack: {
-        height: theme.space(2),
-        borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.foreground,
-        overflow: 'hidden',
-    },
-    progressFill: (value: number, color: string) => ({
-        width: `${Math.min(100, Math.max(0, value * 100))}%`,
-        height: '100%',
-        backgroundColor: color,
-        borderRadius: theme.radius.full,
-    }),
     list: {
         backgroundColor: theme.colors.background,
         borderRadius: theme.radius['4xl'],
@@ -223,7 +200,13 @@ const SubscriptionScreen: FC = () => {
         plans.find((plan) => plan.trainer.id === selectedTrainerId) ?? plans[0] ?? null;
 
     if (active) {
-        const courseWorkouts = [...active.workouts].sort((a, b) => {
+        const courseWorkouts = active.workouts
+            .filter(
+                (item) =>
+                    item.status !== 'cancelled' ||
+                    item.attendance === 'missed',
+            )
+            .sort((a, b) => {
             const aTime = a.startAt ? new Date(a.startAt).getTime() : 0;
             const bTime = b.startAt ? new Date(b.startAt).getTime() : 0;
             return aTime - bTime;
