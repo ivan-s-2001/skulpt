@@ -13,7 +13,10 @@ import { useRunningWorkoutStatic, useRunningWorkoutTicker } from '@/hooks/use-ru
 import type { WorkoutOverviewMetaMap } from '@/hooks/use-workouts';
 import { Pushes } from '@/components/promo/pushes';
 import { getWorkoutDateKey } from '@/helpers/workouts';
-import { useTrainers } from '@/hooks/use-planning';
+import { useTrainers, useWorkSchedule } from '@/hooks/use-planning';
+import { EMPTY_WORK_SCHEDULE, resolveWorkShift } from '@/helpers/planning';
+import { Button } from '@/components/buttons/base';
+import { useEditor } from '@/hooks/use-editor';
 
 import { WorkoutCard } from '../workout-card';
 import { Header } from '../header';
@@ -58,6 +61,20 @@ const styles = StyleSheet.create((theme, rt) => ({
     selectedDayContainer: {
         paddingHorizontal: theme.space(4),
         gap: theme.space(1),
+    },
+    selectedDayHeader: {
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: theme.space(3),
+    },
+    selectedDayText: {
+        flex: 1,
+        gap: theme.space(1),
+    },
+    selectedDayMeta: {
+        fontSize: theme.fontSize.sm.fontSize,
+        color: theme.colors.typography,
+        opacity: 0.62,
     },
     selectedDayTitle: {
         fontSize: theme.fontSize.xl.fontSize,
@@ -107,6 +124,8 @@ export const Workouts: FC<WorkoutsProps> = ({
     const { runningWorkout } = useRunningWorkoutStatic();
     const { elapsedFormated } = useRunningWorkoutTicker();
     const { data: trainers = [] } = useTrainers();
+    const { data: workSchedule } = useWorkSchedule();
+    const { navigate: openEditor } = useEditor();
     const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
 
     const trainerById = useMemo(
@@ -166,11 +185,48 @@ export const Workouts: FC<WorkoutsProps> = ({
         return date.format('dddd, D MMMM');
     }, [i18n.language, selectedDate, t]);
 
+    const selectedShift = useMemo(
+        () =>
+            resolveWorkShift(
+                workSchedule?.config ?? EMPTY_WORK_SCHEDULE,
+                selectedDate,
+            ),
+        [selectedDate, workSchedule?.config],
+    );
+
+    const selectedDayScheduleLabel = useMemo(() => {
+        if (selectedShift === null) return 'Выходной';
+        if (selectedShift) return `Работа · ${selectedShift.start}–${selectedShift.end}`;
+        return 'Рабочий график не указан';
+    }, [selectedShift]);
+
     const selectedDaySubtitle = useMemo(() => {
         const count = selectedWorkouts.length;
         if (count === 0) return 'Тренировок нет';
         return `${count} ${count === 1 ? 'тренировка' : count < 5 ? 'тренировки' : 'тренировок'}`;
     }, [selectedWorkouts.length]);
+
+    const handleAddSolo = useCallback(() => {
+        let startAt = dayjs(selectedDate)
+            .hour(18)
+            .minute(0)
+            .second(0)
+            .millisecond(0);
+
+        if (
+            selectedDate === dayjs().format('YYYY-MM-DD') &&
+            startAt.isBefore(dayjs())
+        ) {
+            startAt = dayjs().add(1, 'hour').startOf('hour');
+        }
+
+        openEditor({
+            type: 'workout__create',
+            payload: {
+                startAt: startAt.toDate(),
+            },
+        });
+    }, [openEditor, selectedDate]);
 
     const renderHeader = useCallback(
         () => (
@@ -184,14 +240,34 @@ export const Workouts: FC<WorkoutsProps> = ({
                     trainerColorById={trainerColorById}
                 />
                 <VStack style={styles.selectedDayContainer}>
-                    <Text style={styles.selectedDayTitle}>{selectedDayTitle}</Text>
-                    <Text style={styles.selectedDaySubtitle}>{selectedDaySubtitle}</Text>
+                    <HStack style={styles.selectedDayHeader}>
+                        <VStack style={styles.selectedDayText}>
+                            <Text style={styles.selectedDayTitle}>
+                                {selectedDayTitle}
+                            </Text>
+                            <Text style={styles.selectedDayMeta}>
+                                {selectedDayScheduleLabel}
+                            </Text>
+                            <Text style={styles.selectedDaySubtitle}>
+                                {selectedDaySubtitle}
+                            </Text>
+                        </VStack>
+
+                        <Button
+                            type="link"
+                            size="sm"
+                            title="+ Соло"
+                            onPress={handleAddSolo}
+                        />
+                    </HStack>
                 </VStack>
             </VStack>
         ),
         [
             firstWeekday,
             selectedDate,
+            handleAddSolo,
+            selectedDayScheduleLabel,
             selectedDaySubtitle,
             selectedDayTitle,
             trainerColorById,
