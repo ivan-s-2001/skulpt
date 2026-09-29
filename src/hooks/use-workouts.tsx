@@ -59,6 +59,7 @@ import {
 import { getPrimaryAnchorMuscleValue } from '@/constants/muscles';
 import { getWorkoutOverviewExerciseMetaRows } from '@/crud/workout/home';
 import { waitForIdle } from '@/helpers/idle';
+import { markSubscriptionSessionAttendedByWorkout } from '@/crud/planning';
 
 export const deleteWorkoutMutationKey = ['delete-workout'] as const;
 
@@ -383,6 +384,9 @@ export const useCompleteWorkout = () => {
             invalidateWorkoutSetDerivedQueries(queryClient);
 
             if (!result.didComplete) return;
+            markSubscriptionSessionAttendedByWorkout(data.id)
+                .then(() => queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] }))
+                .catch(() => undefined);
             const diagnosticProperties = {
                 ...getWorkoutProgressProperties(
                     result.exerciseCount,
