@@ -12,7 +12,7 @@ import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 interface SubscriptionProgressCardProps {
     trainerName: string;
-    trainerColor: string;
+    trainerColor?: string | null;
     attended: number;
     target: number;
     missed: number;
@@ -97,6 +97,7 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
     compact = false,
 }) => {
     const { theme } = useUnistyles();
+    const color = trainerColor || theme.colors.lime[400];
     const remaining = Math.max(0, target - attended);
     const next = nextAt ? dayjs(nextAt).format('D MMM · HH:mm') : '—';
 
@@ -106,7 +107,7 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
                 <VStack style={styles.titleWrap}>
                     <TrainerBadge
                         name={trainerName}
-                        color={trainerColor}
+                        color={color}
                     />
                     {!compact && (
                         <Text style={styles.subtitle}>
@@ -128,7 +129,7 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
                 <Box
                     style={styles.progressFill(
                         attended / Math.max(1, target),
-                        trainerColor,
+                        color,
                     )}
                 />
             </Box>
