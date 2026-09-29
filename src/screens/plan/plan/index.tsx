@@ -13,6 +13,7 @@ import { Label } from '@/components/forms/label';
 import { Button } from '@/components/buttons/base';
 import { useEditor } from '@/hooks/use-editor';
 import { useWorkouts } from '@/hooks/use-workouts';
+import { useActiveSubscription } from '@/hooks/use-planning';
 import { WorkoutCard } from '@/screens/home/components/workout-card';
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -44,6 +45,19 @@ const styles = StyleSheet.create((theme, rt) => ({
         opacity: 0.55,
         fontSize: theme.fontSize.sm.fontSize,
         lineHeight: theme.fontSize.sm.lineHeight,
+    },
+    metricRow: {
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: theme.space(3),
+    },
+    metricLabel: {
+        color: theme.colors.typography,
+        opacity: 0.55,
+    },
+    metricValue: {
+        color: theme.colors.typography,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
     },
     workouts: {
         gap: theme.space(2),
@@ -79,6 +93,17 @@ const PlanScreen: FC = () => {
     const { t } = useTranslation(['screens']);
     const { navigate } = useEditor();
     const { data: workouts = [] } = useWorkouts();
+    const { data: active } = useActiveSubscription();
+
+    const trainerWorkoutIds = useMemo(
+        () =>
+            new Set(
+                (active?.sessions || [])
+                    .map((session) => session.workoutId)
+                    .filter((id): id is string => Boolean(id)),
+            ),
+        [active?.sessions],
+    );
 
     const plannedSolo = useMemo(
         () =>
@@ -87,6 +112,7 @@ const PlanScreen: FC = () => {
                     (workout) =>
                         workout.status === 'planned' &&
                         workout.startAt &&
+                        !trainerWorkoutIds.has(workout.id) &&
                         dayjs(workout.startAt).isAfter(dayjs().startOf('day')),
                 )
                 .sort(
@@ -94,12 +120,20 @@ const PlanScreen: FC = () => {
                         new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime(),
                 )
                 .slice(0, 4),
-        [workouts],
+        [trainerWorkoutIds, workouts],
     );
 
     const handleAddSolo = useCallback(() => {
         navigate({ type: 'workout__create' });
     }, [navigate]);
+
+    const attended =
+        active?.sessions.filter((session) => session.status === 'attended').length ?? 0;
+    const nextSession = active?.sessions.find(
+        (session) =>
+            session.status === 'planned' &&
+            !dayjs(session.startAt).isBefore(dayjs().subtract(1, 'minute')),
+    );
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -109,14 +143,40 @@ const PlanScreen: FC = () => {
                 <Label>{t('plan.subscription.section', { ns: 'screens' })}</Label>
                 <VStack style={styles.card}>
                     <Text style={styles.title}>
-                        {t('plan.subscription.title', { ns: 'screens' })}
+                        {active?.trainer?.name || t('plan.subscription.title', { ns: 'screens' })}
                     </Text>
-                    <Text style={styles.description}>
-                        {t('plan.subscription.emptyDescription', { ns: 'screens' })}
-                    </Text>
+
+                    {active ? (
+                        <>
+                            <HStack style={styles.metricRow}>
+                                <Text style={styles.metricLabel}>Прогресс</Text>
+                                <Text style={styles.metricValue}>
+                                    {attended}/{active.subscription.targetSessions}
+                                </Text>
+                            </HStack>
+                            <HStack style={styles.metricRow}>
+                                <Text style={styles.metricLabel}>Следующее</Text>
+                                <Text style={styles.metricValue}>
+                                    {nextSession
+                                        ? dayjs(nextSession.startAt).format('D MMM · HH:mm')
+                                        : '—'}
+                                </Text>
+                            </HStack>
+                        </>
+                    ) : (
+                        <Text style={styles.description}>
+                            {t('plan.subscription.emptyDescription', { ns: 'screens' })}
+                        </Text>
+                    )}
+
                     <Button
-                        title={t('plan.subscription.action', { ns: 'screens' })}
+                        title={active ? 'Открыть абонемент' : t('plan.subscription.action', { ns: 'screens' })}
                         onPress={() => router.navigate('/plan/subscription' as any)}
+                    />
+                    <Button
+                        type="link"
+                        title="Тренеры"
+                        onPress={() => router.navigate('/plan/trainers' as any)}
                     />
                 </VStack>
             </VStack>
