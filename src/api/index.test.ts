@@ -114,7 +114,7 @@ describe('sync API error reporting', () => {
         expect(axios.create).toHaveBeenCalledWith(
             expect.objectContaining({
                 headers: expect.objectContaining({
-                    'x-skulpt-sync-schema': '2',
+                    'x-skulpt-sync-schema': '3',
                 }),
             }),
         );
