@@ -26,6 +26,9 @@ import {
     workoutExercise,
     workoutGroup,
     measurement,
+    trainer,
+    subscription,
+    workSchedule,
 } from '@/db/schema';
 import { getCurrentUser } from '@/crud/user';
 import { db } from '@/db';
@@ -562,6 +565,7 @@ const applyUserSyncPacks = async (packs: Record<string, any>) => {
             rows: any[],
             key: any,
             dateKeys: string[],
+            recordKey: string = 'id',
         ) => {
             for (const row of rows) {
                 const payload = (() => {
@@ -584,7 +588,7 @@ const applyUserSyncPacks = async (packs: Record<string, any>) => {
                     }
                 }
 
-                const recordId = payload.id as string | undefined;
+                const recordId = payload[recordKey] as string | undefined;
 
                 if (typeof recordId !== 'string' || recordId.length === 0) {
                     continue;
@@ -709,6 +713,43 @@ const applyUserSyncPacks = async (packs: Record<string, any>) => {
             for (const id of packs.exercise.deletedIds ?? []) {
                 await deleteWorkoutExercisesWithSets(workoutExercise.exerciseId, id);
                 await tx.delete(exercise).where(eq(exercise.id, id));
+            }
+        }
+
+        if (packs.trainer) {
+            await upsert('trainer', trainer, packs.trainer.records ?? [], trainer.id, [
+                'createdAt',
+                'updatedAt',
+            ]);
+            for (const id of packs.trainer.deletedIds ?? []) {
+                await tx.delete(trainer).where(eq(trainer.id, id));
+            }
+        }
+
+        if (packs.subscription) {
+            await upsert(
+                'subscription',
+                subscription,
+                packs.subscription.records ?? [],
+                subscription.id,
+                ['createdAt', 'updatedAt', 'startedAt', 'completedAt'],
+            );
+            for (const id of packs.subscription.deletedIds ?? []) {
+                await tx.delete(subscription).where(eq(subscription.id, id));
+            }
+        }
+
+        if (packs.work_schedule) {
+            await upsert(
+                'work_schedule',
+                workSchedule,
+                packs.work_schedule.records ?? [],
+                workSchedule.userId,
+                ['createdAt', 'updatedAt'],
+                'userId',
+            );
+            for (const userId of packs.work_schedule.deletedIds ?? []) {
+                await tx.delete(workSchedule).where(eq(workSchedule.userId, userId));
             }
         }
 
