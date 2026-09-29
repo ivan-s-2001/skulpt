@@ -269,7 +269,7 @@ const SubscriptionScreen: FC = () => {
                             return (
                                 <VStack key={item.id}>
                                     <Pressable
-                                        disabled={isMissed}
+                                        disabled={isMissed || isPastUnresolved}
                                         onPress={() => router.navigate(`/workout/${item.id}`)}
                                     >
                                         <HStack style={styles.row}>
