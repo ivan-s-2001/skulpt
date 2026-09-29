@@ -7,7 +7,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
     LucideIcon,
     CalendarDays,
-    ListTodo,
+    BadgeCheck,
     Settings2,
     CircleGauge,
     ChartNoAxesColumn,
@@ -106,9 +106,9 @@ const Tabs: FC<TabsType> = ({ state }) => {
                 icon: CalendarDays,
             },
             {
-                screen: 'plan',
-                title: 'plan.title',
-                icon: ListTodo,
+                screen: 'subscription',
+                title: 'subscription.title',
+                icon: BadgeCheck,
             },
             {
                 screen: 'results',
