@@ -2,6 +2,7 @@ import { FC, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { WorkoutSelect } from '@/db/schema';
 import { Box } from '@/components/primitives/box';
@@ -31,6 +32,45 @@ const styles = StyleSheet.create((theme) => ({
     },
     container: {
         gap: theme.space(2),
+    },
+    navRow: {
+        minHeight: theme.space(10),
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: theme.space(2),
+    },
+    navTitle: {
+        flex: 1,
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.sm.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+        textTransform: 'capitalize',
+    },
+    navActions: {
+        alignItems: 'center',
+        gap: theme.space(1),
+    },
+    navButton: {
+        minWidth: theme.space(9),
+        minHeight: theme.space(9),
+        paddingHorizontal: theme.space(2),
+        borderRadius: theme.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.foreground,
+    },
+    todayButton: {
+        minHeight: theme.space(9),
+        paddingHorizontal: theme.space(3),
+        borderRadius: theme.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.foreground,
+    },
+    todayText: {
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.xs.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
     },
     weekdaysRow: {
         justifyContent: 'space-between',
@@ -170,9 +210,14 @@ export const WeekStats: FC<WeekStatsProps> = ({
         return map;
     }, [trainerColorById, workouts]);
 
+    const selected = useMemo(
+        () => dayjs(selectedDate).startOf('day'),
+        [selectedDate],
+    );
+
     const weekDays = useMemo(() => {
         const today = dayjs();
-        const weekStart = getWeekStart(today, firstWeekday);
+        const weekStart = getWeekStart(selected, firstWeekday);
         const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, {
             weekday: 'short',
         });
@@ -193,11 +238,77 @@ export const WeekStats: FC<WeekStatsProps> = ({
                 state,
             };
         });
-    }, [firstWeekday, i18n.language, selectedDate, workoutStateByDate]);
+    }, [firstWeekday, i18n.language, selected, selectedDate, workoutStateByDate]);
+
+    const weekStart = useMemo(
+        () => getWeekStart(selected, firstWeekday),
+        [firstWeekday, selected],
+    );
+    const weekEnd = useMemo(() => weekStart.add(6, 'day'), [weekStart]);
+    const todayWeekStart = useMemo(
+        () => getWeekStart(dayjs(), firstWeekday),
+        [firstWeekday],
+    );
+    const isCurrentWeek = weekStart.isSame(todayWeekStart, 'day');
+
+    const weekLabel = useMemo(() => {
+        const sameMonth = weekStart.month() === weekEnd.month();
+        const start = weekStart.locale(i18n.language);
+        const end = weekEnd.locale(i18n.language);
+
+        if (sameMonth) {
+            return `${start.date()}–${end.date()} ${end.format('MMMM')}`;
+        }
+
+        return `${start.format('D MMM')} – ${end.format('D MMM')}`;
+    }, [i18n.language, weekEnd, weekStart]);
+
+    const moveWeek = (direction: -1 | 1) => {
+        onSelectDate(
+            selected.add(direction * 7, 'day').format('YYYY-MM-DD'),
+        );
+    };
 
     return (
         <Box style={styles.wrapper}>
             <VStack style={styles.container}>
+                <HStack style={styles.navRow}>
+                    <Text style={styles.navTitle}>{weekLabel}</Text>
+
+                    <HStack style={styles.navActions}>
+                        <Pressable
+                            style={styles.navButton}
+                            onPress={() => moveWeek(-1)}
+                        >
+                            <ChevronLeft
+                                size={theme.space(5)}
+                                color={theme.colors.typography}
+                            />
+                        </Pressable>
+
+                        {!isCurrentWeek && (
+                            <Pressable
+                                style={styles.todayButton}
+                                onPress={() =>
+                                    onSelectDate(dayjs().format('YYYY-MM-DD'))
+                                }
+                            >
+                                <Text style={styles.todayText}>Сегодня</Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable
+                            style={styles.navButton}
+                            onPress={() => moveWeek(1)}
+                        >
+                            <ChevronRight
+                                size={theme.space(5)}
+                                color={theme.colors.typography}
+                            />
+                        </Pressable>
+                    </HStack>
+                </HStack>
+
                 <HStack style={styles.weekdaysRow}>
                     {weekDays.map((item) => (
                         <Box key={`weekday-${item.dateKey}`} style={styles.weekdayCell}>
