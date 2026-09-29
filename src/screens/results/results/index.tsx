@@ -12,7 +12,7 @@ import { Label } from '@/components/forms/label';
 import { useWorkoutStats } from '@/hooks/use-workouts';
 import { useUser } from '@/hooks/use-user';
 import { useActiveSubscription } from '@/hooks/use-planning';
-import { TrainerBadge } from '@/components/planning/trainer-badge';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 import { ActivitySummary } from './components/activity-summary';
 import { MonthStats } from './components/month';
