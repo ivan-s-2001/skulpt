@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "Inicio"
+        "title": "Agenda"
+    },
+    "plan": {
+        "title": "Plan"
     },
     "results": {
-        "title": "Resultados"
+        "title": "Progreso"
     },
     "exercises": {
         "title": "Ejercicios"
