@@ -196,11 +196,13 @@ const getWorkoutContext = (
     const trainerWeekCounts = new Map<string, number>();
     const totalWeekCounts = new Map<string, number>();
 
+    const contextFrom = from.subtract(6, 'day');
+
     for (const workout of workouts) {
         if (workout.status === 'cancelled') continue;
 
         const dateKey = getWorkoutDateKey(workout);
-        if (!dateKey || dayjs(dateKey).isBefore(from, 'day')) continue;
+        if (!dateKey || dayjs(dateKey).isBefore(contextFrom, 'day')) continue;
 
         occupiedDates.add(dateKey);
         increment(totalWeekCounts, isoWeekKey(dayjs(dateKey).toDate()));
