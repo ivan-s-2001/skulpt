@@ -15,7 +15,7 @@ export const trainer = sqliteTable(
         userId: text('user_id', { length: 21 }).notNull(),
         name: text('name').notNull(),
         color: text('color').notNull().default('#a3e635'),
-        scheduleJson: text('schedule_json').notNull().default('{}'),
+        scheduleJson: text('schedule_json').notNull().default('[]'),
         createdAt: integer('created_at', { mode: 'timestamp_ms' })
             .notNull()
             .default(sql`(strftime('%s','now') * 1000)`),
