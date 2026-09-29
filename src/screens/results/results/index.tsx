@@ -71,6 +71,19 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.typography,
         fontWeight: theme.fontWeight.semibold.fontWeight,
     },
+    subscriptionProgressTrack: {
+        height: theme.space(2),
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.background,
+        overflow: 'hidden',
+        marginBottom: theme.space(2),
+    },
+    subscriptionProgressFill: (value: number, color: string) => ({
+        width: `${Math.min(100, Math.max(0, value * 100))}%`,
+        height: '100%',
+        borderRadius: theme.radius.full,
+        backgroundColor: color,
+    }),
 }));
 
 const ResultsScreen = () => {
@@ -150,8 +163,20 @@ const ResultsScreen = () => {
             0,
             activeSubscription.subscription.targetSessions - attended,
         );
+        const next = activeSubscription.workouts
+            .filter(
+                (item) =>
+                    item.attendance !== 'missed' &&
+                    (item.status === 'planned' || item.status === 'in_progress') &&
+                    item.startAt,
+            )
+            .sort(
+                (a, b) =>
+                    new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime(),
+            )
+            .find((item) => new Date(item.startAt!).getTime() >= Date.now());
 
-        return { attended, missed, remaining };
+        return { attended, missed, remaining, next };
     }, [activeSubscription]);
 
     return (
@@ -168,16 +193,28 @@ const ResultsScreen = () => {
                     <VStack style={styles.statsContainer}>
                         <VStack style={styles.subscriptionHeader}>
                             <Text style={styles.subscriptionTitle}>
-                                {activeSubscription.trainer?.name || 'Тренер'}
+                                Активный абонемент
                             </Text>
                             {activeSubscription.trainer && (
                                 <TrainerBadge
                                     name={activeSubscription.trainer.name}
                                     color={activeSubscription.trainer.color}
-                                    prefix="С"
                                 />
                             )}
                         </VStack>
+
+                        <Box style={styles.subscriptionProgressTrack}>
+                            <Box
+                                style={styles.subscriptionProgressFill(
+                                    subscriptionStats.attended /
+                                        Math.max(
+                                            1,
+                                            activeSubscription.subscription.targetSessions,
+                                        ),
+                                    activeSubscription.trainer?.color || '#a3e635',
+                                )}
+                            />
+                        </Box>
 
                         <HStack style={styles.statContainer}>
                             <Text fontWeight="medium" style={styles.statTitle}>
@@ -210,6 +247,27 @@ const ResultsScreen = () => {
                                 {subscriptionStats.missed}
                             </Text>
                         </HStack>
+
+                        {subscriptionStats.next?.startAt && (
+                            <>
+                                <Box style={styles.divider} />
+                                <HStack style={styles.statContainer}>
+                                    <Text fontWeight="medium" style={styles.statTitle}>
+                                        Следующее
+                                    </Text>
+                                    <Text fontWeight="medium" style={styles.statTitle}>
+                                        {new Intl.DateTimeFormat(undefined, {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        }).format(
+                                            new Date(subscriptionStats.next.startAt),
+                                        )}
+                                    </Text>
+                                </HStack>
+                            </>
+                        )}
                     </VStack>
                 </VStack>
             )}
