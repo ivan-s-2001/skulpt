@@ -250,7 +250,9 @@ const SubscriptionScreen: FC = () => {
                                 !isAttended &&
                                 !isMissed &&
                                 item.startAt != null &&
-                                dayjs(item.startAt).isBefore(dayjs());
+                                dayjs(item.startAt)
+                                    .add(60, 'minute')
+                                    .isBefore(dayjs());
 
                             const status = isAttended
                                 ? 'Посещено'
