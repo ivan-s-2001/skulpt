@@ -1,4 +1,3 @@
-import React from 'react';
 import { router } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
 
