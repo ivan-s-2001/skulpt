@@ -68,7 +68,7 @@ const NETWORK_ERROR_CODES = new Set(['ERR_NETWORK', 'ERR_CANCELED']);
 //  - DATABASE               → already captured by captureSyncFailure in the sync engine;
 //                             reporting here would be a duplicate
 const SUPPRESS_SENTRY_ERRORS = new Set(['NO_INTERNET', 'TIMEOUT', 'DATABASE']);
-const SYNC_SCHEMA_VERSION = '2';
+const SYNC_SCHEMA_VERSION = '3';
 
 const createSyncClient = () => {
     return createAxios({
