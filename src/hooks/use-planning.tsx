@@ -8,7 +8,7 @@ import {
     getTrainers,
     getWorkSchedule,
     saveWorkSchedule,
-    updateSubscriptionSession,
+    setSubscriptionWorkoutAttendance,
     updateTrainer,
 } from '@/crud/planning';
 
@@ -88,23 +88,25 @@ export const useCreateSubscription = () => {
         mutationFn: createSubscription,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+            queryClient.invalidateQueries({ queryKey: ['workouts'] });
         },
     });
 };
 
-export const useUpdateSubscriptionSession = () => {
+export const useSetSubscriptionWorkoutAttendance = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: ({
-            id,
-            updates,
+            workoutId,
+            attendance,
         }: {
-            id: string;
-            updates: Parameters<typeof updateSubscriptionSession>[1];
-        }) => updateSubscriptionSession(id, updates),
+            workoutId: string;
+            attendance: 'attended' | 'missed';
+        }) => setSubscriptionWorkoutAttendance(workoutId, attendance),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+            queryClient.invalidateQueries({ queryKey: ['workouts'] });
         },
     });
 };
