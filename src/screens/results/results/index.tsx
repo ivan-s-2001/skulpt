@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { router } from 'expo-router';
+import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 
 import { Title } from '@/components/typography/title';
@@ -12,7 +13,7 @@ import { Label } from '@/components/forms/label';
 import { useWorkoutStats } from '@/hooks/use-workouts';
 import { useUser } from '@/hooks/use-user';
 import { useActiveSubscription } from '@/hooks/use-planning';
-import { TrainerBadge } from '@/components/subscription/trainer-badge';
+import { SubscriptionProgressCard } from '@/components/subscription/progress-card';
 
 import { ActivitySummary } from './components/activity-summary';
 import { MonthStats } from './components/month';
@@ -63,32 +64,11 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.typography,
         opacity: 1,
     },
-    subscriptionHeader: {
-        gap: theme.space(2),
-        marginBottom: theme.space(2),
-    },
-    subscriptionTitle: {
-        color: theme.colors.typography,
-        fontWeight: theme.fontWeight.semibold.fontWeight,
-    },
-    subscriptionProgressTrack: {
-        height: theme.space(2),
-        borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.background,
-        overflow: 'hidden',
-        marginBottom: theme.space(2),
-    },
-    subscriptionProgressFill: (value: number, color: string) => ({
-        width: `${Math.min(100, Math.max(0, value * 100))}%`,
-        height: '100%',
-        borderRadius: theme.radius.full,
-        backgroundColor: color,
-    }),
+
 }));
 
 const ResultsScreen = () => {
     const { t } = useTranslation(['common', 'screens']);
-    const { theme } = useUnistyles();
     const { user } = useUser();
     const stats = useWorkoutStats();
     const { data: activeSubscription } = useActiveSubscription();
@@ -191,85 +171,17 @@ const ResultsScreen = () => {
             {activeSubscription && subscriptionStats && (
                 <VStack style={styles.fieldContainer}>
                     <Label style={styles.label}>Абонемент</Label>
-                    <VStack style={styles.statsContainer}>
-                        <VStack style={styles.subscriptionHeader}>
-                            <Text style={styles.subscriptionTitle}>
-                                Активный абонемент
-                            </Text>
-                            {activeSubscription.trainer && (
-                                <TrainerBadge
-                                    name={activeSubscription.trainer.name}
-                                    color={activeSubscription.trainer.color}
-                                />
-                            )}
-                        </VStack>
-
-                        <Box style={styles.subscriptionProgressTrack}>
-                            <Box
-                                style={styles.subscriptionProgressFill(
-                                    subscriptionStats.attended /
-                                        Math.max(
-                                            1,
-                                            activeSubscription.subscription.targetSessions,
-                                        ),
-                                    activeSubscription.trainer?.color || theme.colors.lime[400],
-                                )}
-                            />
-                        </Box>
-
-                        <HStack style={styles.statContainer}>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                Посещено
-                            </Text>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                {subscriptionStats.attended}/
-                                {activeSubscription.subscription.targetSessions}
-                            </Text>
-                        </HStack>
-
-                        <Box style={styles.divider} />
-
-                        <HStack style={styles.statContainer}>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                Осталось
-                            </Text>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                {subscriptionStats.remaining}
-                            </Text>
-                        </HStack>
-
-                        <Box style={styles.divider} />
-
-                        <HStack style={styles.statContainer}>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                Пропущено
-                            </Text>
-                            <Text fontWeight="medium" style={styles.statTitle}>
-                                {subscriptionStats.missed}
-                            </Text>
-                        </HStack>
-
-                        {subscriptionStats.next?.startAt && (
-                            <>
-                                <Box style={styles.divider} />
-                                <HStack style={styles.statContainer}>
-                                    <Text fontWeight="medium" style={styles.statTitle}>
-                                        Следующее
-                                    </Text>
-                                    <Text fontWeight="medium" style={styles.statTitle}>
-                                        {new Intl.DateTimeFormat(undefined, {
-                                            day: 'numeric',
-                                            month: 'short',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        }).format(
-                                            new Date(subscriptionStats.next.startAt),
-                                        )}
-                                    </Text>
-                                </HStack>
-                            </>
-                        )}
-                    </VStack>
+                    <SubscriptionProgressCard
+                        trainerName={activeSubscription.trainer?.name || 'Тренер'}
+                        trainerColor={
+                            activeSubscription.trainer?.color || '#a3e635'
+                        }
+                        attended={subscriptionStats.attended}
+                        target={activeSubscription.subscription.targetSessions}
+                        missed={subscriptionStats.missed}
+                        nextAt={subscriptionStats.next?.startAt}
+                        onPress={() => router.navigate('/subscription')}
+                    />
                 </VStack>
             )}
 
