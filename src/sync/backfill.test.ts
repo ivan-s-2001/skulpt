@@ -24,6 +24,21 @@ const mockTables = {
         id: 'measurement.id',
         updatedAt: 'measurement.updated_at',
     },
+    trainer: {
+        __name: 'trainer',
+        id: 'trainer.id',
+        updatedAt: 'trainer.updated_at',
+    },
+    subscription: {
+        __name: 'subscription',
+        id: 'subscription.id',
+        updatedAt: 'subscription.updated_at',
+    },
+    workSchedule: {
+        __name: 'work_schedule',
+        userId: 'work_schedule.user_id',
+        updatedAt: 'work_schedule.updated_at',
+    },
     syncQueue: {
         __name: 'sync_queue',
         tableName: 'sync_queue.table_name',
