@@ -26,6 +26,7 @@ import {
 import { useWorkouts } from '@/hooks/use-workouts';
 import { buildTrainerPlans } from '@/helpers/trainer-planner';
 import { TrainerBadge } from '@/components/subscription/trainer-badge';
+import { SubscriptionProgressCard } from '@/components/subscription/progress-card';
 
 const styles = StyleSheet.create((theme, rt) => ({
     container: {
@@ -248,53 +249,14 @@ const SubscriptionScreen: FC = () => {
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
                 <Title type="h1">Абонемент</Title>
 
-                <VStack style={styles.card}>
-                    <VStack style={styles.heroContent}>
-                        <Text style={styles.title}>Активный абонемент</Text>
-                        {active.trainer && (
-                            <TrainerBadge
-                                name={active.trainer.name}
-                                color={color}
-                            />
-                        )}
-                        <Text style={styles.subtitle}>
-                            {active.subscription.targetSessions} занятий
-                        </Text>
-                    </VStack>
-
-                    <HStack style={styles.metricRow}>
-                        <Text style={styles.metricLabel}>Пройдено</Text>
-                        <Text style={styles.metricValue}>
-                            {attended}/{active.subscription.targetSessions}
-                        </Text>
-                    </HStack>
-
-                    <Box style={styles.progressTrack}>
-                        <Box
-                            style={styles.progressFill(
-                                attended / Math.max(1, active.subscription.targetSessions),
-                                color,
-                            )}
-                        />
-                    </Box>
-
-                    <VStack style={styles.metricGrid}>
-                        <HStack style={styles.metricRow}>
-                            <Text style={styles.metricLabel}>Осталось</Text>
-                            <Text style={styles.metricValue}>{remaining}</Text>
-                        </HStack>
-                        <HStack style={styles.metricRow}>
-                            <Text style={styles.metricLabel}>Пропущено</Text>
-                            <Text style={styles.metricValue}>{missed}</Text>
-                        </HStack>
-                        <HStack style={styles.metricRow}>
-                            <Text style={styles.metricLabel}>Следующее</Text>
-                            <Text style={styles.metricValue}>
-                                {next?.startAt ? dayjs(next.startAt).format('D MMM · HH:mm') : '—'}
-                            </Text>
-                        </HStack>
-                    </VStack>
-                </VStack>
+                <SubscriptionProgressCard
+                    trainerName={active.trainer?.name || 'Тренер'}
+                    trainerColor={color}
+                    attended={attended}
+                    target={active.subscription.targetSessions}
+                    missed={missed}
+                    nextAt={next?.startAt}
+                />
 
                 <VStack style={{ gap: theme.space(3) }}>
                     <Label>Занятия</Label>
@@ -545,7 +507,10 @@ const SubscriptionScreen: FC = () => {
 
                     {selectedPlan && (
                         <VStack style={styles.card}>
-                            <Text style={styles.title}>{selectedPlan.trainer.name}</Text>
+                            <TrainerBadge
+                                name={selectedPlan.trainer.name}
+                                color={selectedPlan.trainer.color}
+                            />
 
                             <HStack style={styles.metricRow}>
                                 <Text style={styles.metricLabel}>Занятий</Text>
