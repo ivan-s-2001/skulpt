@@ -12,6 +12,8 @@ import { VStack } from '@/components/primitives/vstack';
 import { useRunningWorkoutStatic, useRunningWorkoutTicker } from '@/hooks/use-running-workout';
 import type { WorkoutOverviewMetaMap } from '@/hooks/use-workouts';
 import { Pushes } from '@/components/promo/pushes';
+import { Button } from '@/components/buttons/base';
+import { useEditor } from '@/hooks/use-editor';
 
 import { WorkoutCard } from '../workout-card';
 import { Header } from '../header';
@@ -24,12 +26,14 @@ interface WorkoutsProps {
 }
 
 const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
+    if (workout.status === 'cancelled') return null;
+
     const date =
         workout.status === 'planned'
             ? workout.startAt
             : workout.status === 'completed'
-              ? workout.completedAt
-              : workout.startedAt ?? workout.startAt;
+              ? workout.completedAt ?? workout.startedAt ?? workout.startAt ?? workout.createdAt
+              : workout.startedAt ?? workout.startAt ?? workout.createdAt;
 
     if (!date) return null;
 
@@ -42,10 +46,13 @@ const getWorkoutTimestamp = (workout: WorkoutSelect): number => {
         workout.status === 'planned'
             ? workout.startAt
             : workout.status === 'completed'
-              ? workout.completedAt
+              ? workout.completedAt ?? workout.startedAt ?? workout.startAt ?? workout.createdAt
               : workout.startedAt ?? workout.startAt ?? workout.createdAt;
 
-    return date ? new Date(date).getTime() : 0;
+    if (!date) return 0;
+
+    const parsed = dayjs(date);
+    return parsed.isValid() ? parsed.valueOf() : 0;
 };
 
 const statusOrder: Record<WorkoutSelect['status'], number> = {
@@ -104,6 +111,10 @@ const styles = StyleSheet.create((theme, rt) => ({
         opacity: 0.5,
         textAlign: 'center',
     },
+    emptyAction: {
+        width: '100%',
+        marginTop: theme.space(3),
+    },
     footer: {
         paddingTop: theme.space(6),
     },
@@ -116,6 +127,7 @@ export const Workouts: FC<WorkoutsProps> = ({
 }) => {
     const { t, i18n } = useTranslation(['screens']);
     const router = useRouter();
+    const { navigate } = useEditor();
     const { runningWorkout } = useRunningWorkoutStatic();
     const { elapsedFormated } = useRunningWorkoutTicker();
     const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
@@ -143,21 +155,36 @@ export const Workouts: FC<WorkoutsProps> = ({
     );
 
     const selectedDayTitle = useMemo(() => {
-        const date = dayjs(selectedDate).locale(i18n.language);
         const today = dayjs().format('YYYY-MM-DD');
 
         if (selectedDate === today) {
-            return t('today', { ns: 'common', defaultValue: 'Сегодня' });
+            return t('home.schedule.today', { ns: 'screens' });
         }
 
-        return date.format('dddd, D MMMM');
+        const date = dayjs(selectedDate);
+        return new Intl.DateTimeFormat(i18n.language, {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+        }).format(date.toDate());
     }, [i18n.language, selectedDate, t]);
 
     const selectedDaySubtitle = useMemo(() => {
         const count = selectedWorkouts.length;
-        if (count === 0) return 'Тренировок нет';
-        return `${count} ${count === 1 ? 'тренировка' : count < 5 ? 'тренировки' : 'тренировок'}`;
-    }, [selectedWorkouts.length]);
+
+        if (count === 0) {
+            return t('home.schedule.noWorkouts', { ns: 'screens' });
+        }
+
+        return t('home.workoutsCount', {
+            ns: 'screens',
+            count,
+        });
+    }, [selectedWorkouts.length, t]);
+
+    const handleCreateWorkout = useCallback(() => {
+        navigate({ type: 'workout__create' });
+    }, [navigate]);
 
     const renderHeader = useCallback(
         () => (
@@ -208,13 +235,21 @@ export const Workouts: FC<WorkoutsProps> = ({
     const renderEmpty = useCallback(
         () => (
             <VStack style={styles.emptyContainer}>
-                <Text style={styles.emptyTitle}>Свободный день</Text>
-                <Text style={styles.emptyDescription}>
-                    Здесь появятся соло-тренировки и занятия с тренером на выбранную дату.
+                <Text style={styles.emptyTitle}>
+                    {t('home.schedule.freeDay', { ns: 'screens' })}
                 </Text>
+                <Text style={styles.emptyDescription}>
+                    {t('home.schedule.emptyDescription', { ns: 'screens' })}
+                </Text>
+                <Box style={styles.emptyAction}>
+                    <Button
+                        title={t('home.schedule.addWorkout', { ns: 'screens' })}
+                        onPress={handleCreateWorkout}
+                    />
+                </Box>
             </VStack>
         ),
-        [],
+        [handleCreateWorkout, t],
     );
 
     const renderFooter = useCallback(
