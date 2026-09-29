@@ -11,6 +11,8 @@ import { Text } from '@/components/primitives/text';
 import { Label } from '@/components/forms/label';
 import { useWorkoutStats } from '@/hooks/use-workouts';
 import { useUser } from '@/hooks/use-user';
+import { useActiveSubscription } from '@/hooks/use-planning';
+import { TrainerBadge } from '@/components/planning/trainer-badge';
 
 import { ActivitySummary } from './components/activity-summary';
 import { MonthStats } from './components/month';
@@ -36,7 +38,7 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
     },
     statContainer: {
-        height: theme.space(8),
+        minHeight: theme.space(8),
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: theme.space(3),
@@ -61,12 +63,21 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.typography,
         opacity: 1,
     },
+    subscriptionHeader: {
+        gap: theme.space(2),
+        marginBottom: theme.space(2),
+    },
+    subscriptionTitle: {
+        color: theme.colors.typography,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+    },
 }));
 
 const ResultsScreen = () => {
     const { t } = useTranslation(['common', 'screens']);
     const { user } = useUser();
     const stats = useWorkoutStats();
+    const { data: activeSubscription } = useActiveSubscription();
     const [isChartScrubbing, setIsChartScrubbing] = useState(false);
 
     const statsData = useMemo(() => {
@@ -126,6 +137,23 @@ const ResultsScreen = () => {
         ];
     }, [stats, user?.weightUnits, t]);
 
+    const subscriptionStats = useMemo(() => {
+        if (!activeSubscription) return null;
+
+        const attended = activeSubscription.workouts.filter(
+            (item) => item.attendance === 'attended' || item.status === 'completed',
+        ).length;
+        const missed = activeSubscription.workouts.filter(
+            (item) => item.attendance === 'missed',
+        ).length;
+        const remaining = Math.max(
+            0,
+            activeSubscription.subscription.targetSessions - attended,
+        );
+
+        return { attended, missed, remaining };
+    }, [activeSubscription]);
+
     return (
         <ScrollView
             style={styles.container}
@@ -133,10 +161,64 @@ const ResultsScreen = () => {
             scrollEnabled={!isChartScrubbing}
         >
             <Title type="h1">{t('results.title', { ns: 'screens' })}</Title>
+
+            {activeSubscription && subscriptionStats && (
+                <VStack style={styles.fieldContainer}>
+                    <Label style={styles.label}>Абонемент</Label>
+                    <VStack style={styles.statsContainer}>
+                        <VStack style={styles.subscriptionHeader}>
+                            <Text style={styles.subscriptionTitle}>
+                                {activeSubscription.trainer?.name || 'Тренер'}
+                            </Text>
+                            {activeSubscription.trainer && (
+                                <TrainerBadge
+                                    name={activeSubscription.trainer.name}
+                                    color={activeSubscription.trainer.color}
+                                    prefix="С"
+                                />
+                            )}
+                        </VStack>
+
+                        <HStack style={styles.statContainer}>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                Посещено
+                            </Text>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                {subscriptionStats.attended}/
+                                {activeSubscription.subscription.targetSessions}
+                            </Text>
+                        </HStack>
+
+                        <Box style={styles.divider} />
+
+                        <HStack style={styles.statContainer}>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                Осталось
+                            </Text>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                {subscriptionStats.remaining}
+                            </Text>
+                        </HStack>
+
+                        <Box style={styles.divider} />
+
+                        <HStack style={styles.statContainer}>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                Пропущено
+                            </Text>
+                            <Text fontWeight="medium" style={styles.statTitle}>
+                                {subscriptionStats.missed}
+                            </Text>
+                        </HStack>
+                    </VStack>
+                </VStack>
+            )}
+
             <MonthStats />
             <ActivitySummary onScrubbingChange={setIsChartScrubbing} />
             <StrengthStats />
             <Scale />
+
             <VStack style={styles.fieldContainer}>
                 <Label style={styles.label}>{t('results.stats.title', { ns: 'screens' })}</Label>
                 <VStack style={styles.statsContainer}>
@@ -157,7 +239,9 @@ const ResultsScreen = () => {
                                         </Text>
                                     </Box>
                                 </HStack>
-                                {index < statsData.length - 1 && <Box style={styles.divider} />}
+                                {index < statsData.length - 1 && (
+                                    <Box style={styles.divider} />
+                                )}
                             </VStack>
                         ))}
                     </VStack>
