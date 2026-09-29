@@ -16,7 +16,7 @@ import { VStack } from '@/components/primitives/vstack';
 import { HStack } from '@/components/primitives/hstack';
 import { useDeleteWorkout, type WorkoutOverviewMeta } from '@/hooks/use-workouts';
 import { formatWorkoutDuration } from '@/helpers/times';
-import { TrainerBadge } from '@/components/planning/trainer-badge';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 dayjs.extend(localizedFormat);
 
