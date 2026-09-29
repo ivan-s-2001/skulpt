@@ -23,6 +23,7 @@ import {
 } from '@/hooks/use-planning';
 import { useWorkouts } from '@/hooks/use-workouts';
 import { buildTrainerPlans } from '@/helpers/trainer-planner';
+import { TrainerBadge } from '@/components/planning/trainer-badge';
 
 const styles = StyleSheet.create((theme, rt) => ({
     container: {
@@ -44,12 +45,6 @@ const styles = StyleSheet.create((theme, rt) => ({
         alignItems: 'center',
         gap: theme.space(3),
     },
-    trainerDot: (color: string) => ({
-        width: theme.space(3),
-        height: theme.space(3),
-        borderRadius: theme.radius.full,
-        backgroundColor: color,
-    }),
     heroContent: {
         flex: 1,
         gap: theme.space(1),
@@ -251,15 +246,18 @@ const SubscriptionScreen: FC = () => {
                 <Title type="h1">Абонемент</Title>
 
                 <VStack style={styles.card}>
-                    <HStack style={styles.heroHeader}>
-                        <Box style={styles.trainerDot(color)} />
-                        <VStack style={styles.heroContent}>
-                            <Text style={styles.title}>{active.trainer?.name || 'Тренер'}</Text>
-                            <Text style={styles.subtitle}>
-                                Активный абонемент · {active.subscription.targetSessions} занятий
-                            </Text>
-                        </VStack>
-                    </HStack>
+                    <VStack style={styles.heroContent}>
+                        <Text style={styles.title}>Активный абонемент</Text>
+                        {active.trainer && (
+                            <TrainerBadge
+                                name={active.trainer.name}
+                                color={color}
+                            />
+                        )}
+                        <Text style={styles.subtitle}>
+                            {active.subscription.targetSessions} занятий
+                        </Text>
+                    </VStack>
 
                     <HStack style={styles.metricRow}>
                         <Text style={styles.metricLabel}>Пройдено</Text>
