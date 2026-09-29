@@ -13,6 +13,7 @@ import { useRunningWorkoutStatic, useRunningWorkoutTicker } from '@/hooks/use-ru
 import type { WorkoutOverviewMetaMap } from '@/hooks/use-workouts';
 import { Pushes } from '@/components/promo/pushes';
 import { getWorkoutDateKey } from '@/helpers/workouts';
+import { useTrainers } from '@/hooks/use-planning';
 
 import { WorkoutCard } from '../workout-card';
 import { Header } from '../header';
@@ -105,13 +106,38 @@ export const Workouts: FC<WorkoutsProps> = ({
     const router = useRouter();
     const { runningWorkout } = useRunningWorkoutStatic();
     const { elapsedFormated } = useRunningWorkoutTicker();
+    const { data: trainers = [] } = useTrainers();
     const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
+
+    const trainerById = useMemo(
+        () =>
+            Object.fromEntries(
+                trainers.map((trainer) => [
+                    trainer.id,
+                    { name: trainer.name, color: trainer.color },
+                ]),
+            ),
+        [trainers],
+    );
+
+    const trainerColorById = useMemo(
+        () =>
+            Object.fromEntries(
+                trainers.map((trainer) => [trainer.id, trainer.color]),
+            ),
+        [trainers],
+    );
 
     const selectedWorkouts = useMemo(
         () =>
             workouts
                 .filter((workout) => {
-                    if (workout.status === 'cancelled') return false;
+                    if (
+                        workout.status === 'cancelled' &&
+                        workout.attendance !== 'missed'
+                    ) {
+                        return false;
+                    }
                     return getWorkoutDateKey(workout) === selectedDate;
                 })
                 .sort((a, b) => {
@@ -155,6 +181,7 @@ export const Workouts: FC<WorkoutsProps> = ({
                     firstWeekday={firstWeekday}
                     selectedDate={selectedDate}
                     onSelectDate={setSelectedDate}
+                    trainerColorById={trainerColorById}
                 />
                 <VStack style={styles.selectedDayContainer}>
                     <Text style={styles.selectedDayTitle}>{selectedDayTitle}</Text>
@@ -167,6 +194,7 @@ export const Workouts: FC<WorkoutsProps> = ({
             selectedDate,
             selectedDaySubtitle,
             selectedDayTitle,
+            trainerColorById,
             workouts,
         ],
     );
@@ -185,11 +213,23 @@ export const Workouts: FC<WorkoutsProps> = ({
                         onPress={handleWorkoutPress}
                         activeElapsedFormatted={activeElapsedFormatted}
                         overviewMeta={workoutsOverviewMeta[item.id]}
+                        trainerName={
+                            item.trainerId ? trainerById[item.trainerId]?.name : null
+                        }
+                        trainerColor={
+                            item.trainerId ? trainerById[item.trainerId]?.color : null
+                        }
                     />
                 </Box>
             );
         },
-        [elapsedFormated, handleWorkoutPress, runningWorkout?.id, workoutsOverviewMeta],
+        [
+            elapsedFormated,
+            handleWorkoutPress,
+            runningWorkout?.id,
+            trainerById,
+            workoutsOverviewMeta,
+        ],
     );
 
     const renderEmpty = useCallback(
