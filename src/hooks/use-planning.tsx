@@ -1,0 +1,110 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import {
+    createSubscription,
+    createTrainer,
+    deleteTrainer,
+    getActiveSubscription,
+    getTrainers,
+    getWorkSchedule,
+    saveWorkSchedule,
+    updateSubscriptionSession,
+    updateTrainer,
+} from '@/crud/planning';
+
+export const useTrainers = () =>
+    useQuery({
+        queryKey: ['planning', 'trainers'],
+        queryFn: getTrainers,
+    });
+
+export const useCreateTrainer = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: createTrainer,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'trainers'] });
+        },
+    });
+};
+
+export const useUpdateTrainer = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            id,
+            input,
+        }: {
+            id: string;
+            input: Parameters<typeof updateTrainer>[1];
+        }) => updateTrainer(id, input),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'trainers'] });
+            queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+        },
+    });
+};
+
+export const useDeleteTrainer = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: deleteTrainer,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'trainers'] });
+        },
+    });
+};
+
+export const useWorkSchedule = () =>
+    useQuery({
+        queryKey: ['planning', 'work-schedule'],
+        queryFn: getWorkSchedule,
+    });
+
+export const useSaveWorkSchedule = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: saveWorkSchedule,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'work-schedule'] });
+        },
+    });
+};
+
+export const useActiveSubscription = () =>
+    useQuery({
+        queryKey: ['planning', 'subscription'],
+        queryFn: getActiveSubscription,
+    });
+
+export const useCreateSubscription = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: createSubscription,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+        },
+    });
+};
+
+export const useUpdateSubscriptionSession = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            id,
+            updates,
+        }: {
+            id: string;
+            updates: Parameters<typeof updateSubscriptionSession>[1];
+        }) => updateSubscriptionSession(id, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
+        },
+    });
+};
