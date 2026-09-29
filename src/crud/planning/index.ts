@@ -403,6 +403,17 @@ export const finishSubscriptionIfComplete = async (subscriptionId: string): Prom
         completedAt: now,
         updatedAt: now,
     });
+
+    const extraPlanned = workouts.filter(
+        (item) =>
+            item.status === 'planned' &&
+            item.attendance !== 'attended' &&
+            item.attendance !== 'missed',
+    );
+
+    for (const item of extraPlanned) {
+        await updateWorkout(item.id, { status: 'cancelled' });
+    }
 };
 
 export const rebuildFutureSubscriptionPlan = async (
