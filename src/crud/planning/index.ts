@@ -469,15 +469,14 @@ export const rebuildFutureSubscriptionPlan = async (
         (item) => item.attendance !== 'missed' && item.status === 'in_progress',
     );
 
-    const from = new Date(startDate);
-    from.setHours(0, 0, 0, 0);
+    const replanFrom = new Date(startDate);
 
     const futurePlanned = own.filter(
         (item) =>
             item.attendance !== 'missed' &&
             item.status === 'planned' &&
             item.startAt != null &&
-            new Date(item.startAt).getTime() >= from.getTime(),
+            new Date(item.startAt).getTime() >= replanFrom.getTime(),
     );
 
     const remainingToPlan = Math.max(
