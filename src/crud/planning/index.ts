@@ -180,14 +180,23 @@ export const updateTrainer = async (
 };
 
 export const deleteTrainer = async (id: string): Promise<void> => {
-    const active = await db
-        .select({ id: subscription.id })
-        .from(subscription)
-        .where(and(eq(subscription.trainerId, id), eq(subscription.status, 'active')))
-        .limit(1);
+    const [linkedSubscription, linkedWorkout] = await Promise.all([
+        db
+            .select({ id: subscription.id })
+            .from(subscription)
+            .where(eq(subscription.trainerId, id))
+            .limit(1),
+        db
+            .select({ id: workout.id })
+            .from(workout)
+            .where(eq(workout.trainerId, id))
+            .limit(1),
+    ]);
 
-    if (active.length) {
-        throw new Error('Нельзя удалить тренера активного абонемента');
+    if (linkedSubscription.length || linkedWorkout.length) {
+        throw new Error(
+            'Нельзя удалить тренера, который уже используется в абонементе или истории тренировок',
+        );
     }
 
     const [existing] = await db.select().from(trainer).where(eq(trainer.id, id)).limit(1);
