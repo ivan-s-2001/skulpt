@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "Home",
+        "title": "Schedule",
         "planned": "Planned",
         "workoutsCount_one": "{{count}} workout",
         "workoutsCount_other": "{{count}} workouts",
