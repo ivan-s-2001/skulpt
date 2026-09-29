@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "Home"
+        "title": "Schedule"
+    },
+    "plan": {
+        "title": "Plan"
     },
     "results": {
-        "title": "Results"
+        "title": "Progress"
     },
     "exercises": {
         "title": "Exercises"
