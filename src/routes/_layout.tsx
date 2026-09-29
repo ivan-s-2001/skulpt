@@ -93,7 +93,7 @@ const App: FC = () => {
                             <Stack.Screen name="(tabs)" />
                             <Stack.Screen name="workout" />
                             <Stack.Screen name="settings" />
-                            <Stack.Screen name="plan" />
+                            <Stack.Screen name="subscription-settings" />
                             <Stack.Screen
                                 name="editor"
                                 options={{
