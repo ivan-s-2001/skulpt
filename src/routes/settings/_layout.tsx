@@ -29,6 +29,7 @@ export default function SettingsLayout() {
                 ),
             }}
         >
+            <Stack.Screen name="schedule" options={{ headerTitle: 'Мой график' }} />
             <Stack.Screen
                 name="autolock"
                 options={{
