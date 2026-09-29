@@ -247,6 +247,7 @@ const SubscriptionScreen: FC = () => {
                                 item.attendance === 'attended' || item.status === 'completed';
                             const isMissed = item.attendance === 'missed';
                             const isPastUnresolved =
+                                item.status === 'planned' &&
                                 !isAttended &&
                                 !isMissed &&
                                 item.startAt != null &&
