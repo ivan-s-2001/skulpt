@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 
 import { Title } from '@/components/typography/title';
@@ -88,6 +88,7 @@ const styles = StyleSheet.create((theme) => ({
 
 const ResultsScreen = () => {
     const { t } = useTranslation(['common', 'screens']);
+    const { theme } = useUnistyles();
     const { user } = useUser();
     const stats = useWorkoutStats();
     const { data: activeSubscription } = useActiveSubscription();
@@ -211,7 +212,7 @@ const ResultsScreen = () => {
                                             1,
                                             activeSubscription.subscription.targetSessions,
                                         ),
-                                    activeSubscription.trainer?.color || '#a3e635',
+                                    activeSubscription.trainer?.color || theme.colors.lime[400],
                                 )}
                             />
                         </Box>
