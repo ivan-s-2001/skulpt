@@ -9,6 +9,7 @@ import { HStack } from '@/components/primitives/hstack';
 import { Text } from '@/components/primitives/text';
 import { VStack } from '@/components/primitives/vstack';
 import { Pressable } from '@/components/primitives/pressable';
+import { getWorkoutDateKey } from '@/helpers/workouts';
 
 interface WeekStatsProps {
     workouts: WorkoutSelect[];
@@ -21,20 +22,6 @@ const getWeekStart = (date: dayjs.Dayjs, firstWeekday: number): dayjs.Dayjs => {
     const day = date.day();
     const offset = firstWeekday === 1 ? day : day === 0 ? 6 : day - 1;
     return date.subtract(offset, 'day').startOf('day');
-};
-
-const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
-    const date =
-        workout.status === 'planned'
-            ? workout.startAt
-            : workout.status === 'completed'
-              ? workout.completedAt
-              : workout.startedAt ?? workout.startAt;
-
-    if (!date) return null;
-
-    const parsed = dayjs(date);
-    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
 };
 
 const styles = StyleSheet.create((theme) => ({
