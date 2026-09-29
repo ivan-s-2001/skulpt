@@ -12,6 +12,7 @@ import { VStack } from '@/components/primitives/vstack';
 import { useRunningWorkoutStatic, useRunningWorkoutTicker } from '@/hooks/use-running-workout';
 import type { WorkoutOverviewMetaMap } from '@/hooks/use-workouts';
 import { Pushes } from '@/components/promo/pushes';
+import { getWorkoutDateKey } from '@/helpers/workouts';
 
 import { WorkoutCard } from '../workout-card';
 import { Header } from '../header';
@@ -22,20 +23,6 @@ interface WorkoutsProps {
     firstWeekday: number;
     workoutsOverviewMeta: WorkoutOverviewMetaMap;
 }
-
-const getWorkoutDateKey = (workout: WorkoutSelect): string | null => {
-    const date =
-        workout.status === 'planned'
-            ? workout.startAt
-            : workout.status === 'completed'
-              ? workout.completedAt
-              : workout.startedAt ?? workout.startAt;
-
-    if (!date) return null;
-
-    const parsed = dayjs(date);
-    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : null;
-};
 
 const getWorkoutTimestamp = (workout: WorkoutSelect): number => {
     const date =
