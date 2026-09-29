@@ -25,6 +25,24 @@ const onlyDates = (dates: string[]) => ({
     weekly: {},
     cycle: null,
     overrides: Object.fromEntries(dates.map((date) => [date, null])),
+    test('never creates a trainer workout in the past today', () => {
+        const from = new Date('2026-09-29T18:07:00');
+        const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
+
+        expect(plan.complete).toBe(true);
+        expect(plan.sessions[0].startAt.getTime()).toBeGreaterThanOrEqual(
+            new Date('2026-09-29T18:15:00').getTime(),
+        );
+    });
+
+    test('skips today when not enough trainer time remains', () => {
+        const from = new Date('2026-09-29T20:20:00');
+        const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe(
+            '2026-09-29',
+        );
+    });
 });
 
 describe('trainer planner', () => {
