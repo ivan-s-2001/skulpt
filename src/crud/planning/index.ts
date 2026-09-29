@@ -479,9 +479,28 @@ export const rebuildFutureSubscriptionPlan = async (
             new Date(item.startAt).getTime() >= replanFrom.getTime(),
     );
 
+    const protectedCurrentPlanned = own.filter((item) => {
+        if (
+            item.attendance === 'missed' ||
+            item.status !== 'planned' ||
+            !item.startAt
+        ) {
+            return false;
+        }
+
+        const startAt = new Date(item.startAt).getTime();
+        const endAt = startAt + 60 * 60 * 1000;
+        const replanAt = replanFrom.getTime();
+
+        return startAt < replanAt && endAt >= replanAt;
+    }).length;
+
     const remainingToPlan = Math.max(
         0,
-        current.targetSessions - attended - inProgress.length,
+        current.targetSessions -
+            attended -
+            inProgress.length -
+            protectedCurrentPlanned,
     );
 
     const futurePlannedIds = new Set(futurePlanned.map((item) => item.id));
