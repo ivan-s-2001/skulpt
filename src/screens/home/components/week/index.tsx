@@ -16,6 +16,7 @@ interface WeekStatsProps {
     firstWeekday: number;
     selectedDate: string;
     onSelectDate: (dateKey: string) => void;
+    trainerColorById?: Record<string, string>;
 }
 
 const getWeekStart = (date: dayjs.Dayjs, firstWeekday: number): dayjs.Dayjs => {
@@ -94,17 +95,18 @@ const styles = StyleSheet.create((theme) => ({
     dayTextSelected: {
         opacity: 1,
     },
-    indicator: {
+    indicators: {
         position: 'absolute',
-        bottom: theme.space(1.25),
+        bottom: theme.space(1),
+        flexDirection: 'row',
+        gap: theme.space(0.75),
+    },
+    indicator: (color: string) => ({
         width: theme.space(1),
         height: theme.space(1),
         borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.lime[400],
-    },
-    indicatorCompleted: {
-        backgroundColor: theme.colors.neutral[950],
-    },
+        backgroundColor: color,
+    }),
 }));
 
 export const WeekStats: FC<WeekStatsProps> = ({
@@ -112,6 +114,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
     firstWeekday,
     selectedDate,
     onSelectDate,
+    trainerColorById = {},
 }) => {
     const { i18n } = useTranslation(['screens']);
 
@@ -122,10 +125,20 @@ export const WeekStats: FC<WeekStatsProps> = ({
                 planned: boolean;
                 inProgress: boolean;
                 completed: boolean;
+                missed: boolean;
+                hasSolo: boolean;
+                trainerColors: Set<string>;
             }
         >();
 
         workouts.forEach((workout) => {
+            if (
+                workout.status === 'cancelled' &&
+                workout.attendance !== 'missed'
+            ) {
+                return;
+            }
+
             const dateKey = getWorkoutDateKey(workout);
             if (!dateKey) return;
 
@@ -133,22 +146,35 @@ export const WeekStats: FC<WeekStatsProps> = ({
                 planned: false,
                 inProgress: false,
                 completed: false,
+                missed: false,
+                hasSolo: false,
+                trainerColors: new Set<string>(),
             };
 
-            if (workout.status === 'planned') state.planned = true;
-            if (workout.status === 'in_progress') state.inProgress = true;
-            if (workout.status === 'completed') state.completed = true;
+            if (workout.attendance === 'missed') state.missed = true;
+            else if (workout.status === 'planned') state.planned = true;
+            else if (workout.status === 'in_progress') state.inProgress = true;
+            else if (workout.status === 'completed') state.completed = true;
+
+            if (workout.trainerId) {
+                const color = trainerColorById[workout.trainerId];
+                if (color) state.trainerColors.add(color);
+            } else {
+                state.hasSolo = true;
+            }
 
             map.set(dateKey, state);
         });
 
         return map;
-    }, [workouts]);
+    }, [trainerColorById, workouts]);
 
     const weekDays = useMemo(() => {
         const today = dayjs();
         const weekStart = getWeekStart(today, firstWeekday);
-        const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, { weekday: 'short' });
+        const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, {
+            weekday: 'short',
+        });
         const todayKey = today.format('YYYY-MM-DD');
 
         return Array.from({ length: 7 }, (_, index) => {
@@ -163,9 +189,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
                 weekday,
                 isToday: dateKey === todayKey,
                 isSelected: dateKey === selectedDate,
-                hasPlanned: Boolean(state?.planned),
-                hasInProgress: Boolean(state?.inProgress),
-                hasCompleted: Boolean(state?.completed),
+                state,
             };
         });
     }, [firstWeekday, i18n.language, selectedDate, workoutStateByDate]);
@@ -187,10 +211,23 @@ export const WeekStats: FC<WeekStatsProps> = ({
                         </Box>
                     ))}
                 </HStack>
+
                 <HStack style={styles.daysRow}>
                     {weekDays.map((item) => {
-                        const completed = item.hasCompleted;
-                        const planned = item.hasPlanned || item.hasInProgress;
+                        const state = item.state;
+                        const hasPlanned = Boolean(state?.planned || state?.inProgress);
+                        const onlyCompleted = Boolean(
+                            state?.completed &&
+                                !hasPlanned &&
+                                !state.missed,
+                        );
+
+                        const indicators: string[] = [];
+                        if (state?.hasSolo) indicators.push('solo');
+                        if (state?.trainerColors) {
+                            indicators.push(...Array.from(state.trainerColors));
+                        }
+                        if (state?.missed) indicators.push('missed');
 
                         return (
                             <Box key={item.dateKey} style={styles.dayCell}>
@@ -198,8 +235,8 @@ export const WeekStats: FC<WeekStatsProps> = ({
                                     <Box
                                         style={[
                                             styles.dayCircle,
-                                            planned && !completed && styles.dayCirclePlanned,
-                                            completed && styles.dayCircleCompleted,
+                                            hasPlanned && styles.dayCirclePlanned,
+                                            onlyCompleted && styles.dayCircleCompleted,
                                             item.isToday && styles.dayCircleToday,
                                             item.isSelected && styles.dayCircleSelected,
                                         ]}
@@ -207,19 +244,33 @@ export const WeekStats: FC<WeekStatsProps> = ({
                                         <Text
                                             style={[
                                                 styles.dayText,
-                                                completed && styles.dayTextCompleted,
+                                                onlyCompleted && styles.dayTextCompleted,
                                                 item.isSelected && styles.dayTextSelected,
                                             ]}
                                         >
                                             {item.day}
                                         </Text>
-                                        {(planned || completed) && (
-                                            <Box
-                                                style={[
-                                                    styles.indicator,
-                                                    completed && styles.indicatorCompleted,
-                                                ]}
-                                            />
+
+                                        {indicators.length > 0 && (
+                                            <HStack style={styles.indicators}>
+                                                {indicators.slice(0, 3).map((indicator, index) => {
+                                                    const color =
+                                                        indicator === 'solo'
+                                                            ? onlyCompleted
+                                                                ? 'rgba(10, 10, 10, 0.82)'
+                                                                : '#a3e635'
+                                                            : indicator === 'missed'
+                                                              ? '#ef4444'
+                                                              : indicator;
+
+                                                    return (
+                                                        <Box
+                                                            key={`${indicator}-${index}`}
+                                                            style={styles.indicator(color)}
+                                                        />
+                                                    );
+                                                })}
+                                            </HStack>
                                         )}
                                     </Box>
                                 </Pressable>
