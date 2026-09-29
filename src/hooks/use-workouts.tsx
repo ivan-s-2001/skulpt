@@ -59,7 +59,7 @@ import {
 import { getPrimaryAnchorMuscleValue } from '@/constants/muscles';
 import { getWorkoutOverviewExerciseMetaRows } from '@/crud/workout/home';
 import { waitForIdle } from '@/helpers/idle';
-import { markSubscriptionSessionAttendedByWorkout } from '@/crud/planning';
+import { markSubscriptionWorkoutAttendedByWorkout } from '@/crud/planning';
 
 export const deleteWorkoutMutationKey = ['delete-workout'] as const;
 
