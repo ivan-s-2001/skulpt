@@ -144,8 +144,9 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
     const isSubscription = Boolean(workout.subscriptionId && workout.trainerId);
 
     const handlePress = useCallback(() => {
+        if (isMissed) return;
         onPress(workout.id);
-    }, [onPress, workout.id]);
+    }, [isMissed, onPress, workout.id]);
 
     const formattedDate = useMemo(() => {
         if ((workout.status === 'planned' || isMissed) && workout.startAt) {
@@ -178,7 +179,7 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
 
     const card = (
         <Box style={styles.container(workout.status)}>
-            <Pressable onPress={handlePress}>
+            <Pressable onPress={handlePress} disabled={isMissed}>
                 <HStack style={styles.card}>
                     <VStack style={styles.content}>
                         <HStack style={styles.workoutInfoContainer}>
