@@ -5,8 +5,6 @@ export type TrainerSelect = typeof trainer.$inferSelect;
 export type TrainerInsert = typeof trainer.$inferInsert;
 export type SubscriptionSelect = typeof subscription.$inferSelect;
 export type SubscriptionInsert = typeof subscription.$inferInsert;
-export type SubscriptionSessionSelect = typeof subscriptionSession.$inferSelect;
-export type SubscriptionSessionInsert = typeof subscriptionSession.$inferInsert;
 export type WorkScheduleSelect = typeof workSchedule.$inferSelect;
 export type WorkScheduleInsert = typeof workSchedule.$inferInsert;
 
@@ -54,34 +52,6 @@ export const subscription = sqliteTable(
     (table) => [
         index('subscription_user_status_idx').on(table.userId, table.status),
         index('subscription_trainer_idx').on(table.trainerId),
-    ],
-);
-
-export const subscriptionSession = sqliteTable(
-    'subscription_session',
-    {
-        id: text('id', { length: 21 }).primaryKey(),
-        subscriptionId: text('subscription_id', { length: 21 }).notNull(),
-        workoutId: text('workout_id', { length: 21 }),
-        startAt: integer('start_at', { mode: 'timestamp_ms' }).notNull(),
-        endAt: integer('end_at', { mode: 'timestamp_ms' }).notNull(),
-        status: text('status', {
-            enum: ['planned', 'attended', 'missed'],
-        })
-            .notNull()
-            .default('planned'),
-        createdAt: integer('created_at', { mode: 'timestamp_ms' })
-            .notNull()
-            .default(sql`(strftime('%s','now') * 1000)`),
-        updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-            .notNull()
-            .default(sql`(strftime('%s','now') * 1000)`)
-            .$onUpdate(() => new Date()),
-    },
-    (table) => [
-        index('subscription_session_subscription_idx').on(table.subscriptionId),
-        index('subscription_session_workout_idx').on(table.workoutId),
-        index('subscription_session_start_idx').on(table.startAt),
     ],
 );
 
