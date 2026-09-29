@@ -1,4 +1,5 @@
 import { FC, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -22,7 +23,7 @@ import { Datetime } from '@/components/forms/fields/datetime';
 import { Switch } from '@/components/forms/fields/base/switch';
 import { SheetChoices } from '@/components/forms/fields/sheet/choices';
 import { useRunningWorkoutStatic } from '@/hooks/use-running-workout';
-import { useUpdateWorkout, useWorkout } from '@/hooks/use-workouts';
+import { useUpdateWorkout, useWorkout, useWorkouts } from '@/hooks/use-workouts';
 import { useAnalytics } from '@/hooks/use-analytics';
 import {
     getAnalyticsErrorType,
@@ -128,6 +129,7 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) =>
     );
     const { track } = useAnalytics();
     const { startWorkout } = useRunningWorkoutStatic();
+    const { data: workouts = [] } = useWorkouts();
 
     const updateWorkoutMutation = useUpdateWorkout();
 
@@ -209,6 +211,59 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) =>
         }
     }, [selectedStatus, startDate, setValue, isEdit]);
 
+    const confirmTrainerDayConflict = async (startAt: Date): Promise<boolean> => {
+        const sameDay = (left: Date, right: Date) =>
+            left.getFullYear() === right.getFullYear() &&
+            left.getMonth() === right.getMonth() &&
+            left.getDate() === right.getDate();
+
+        const trainerWorkout = workouts.find((item) => {
+            if (item.id === existingWorkout?.id) return false;
+            if (!item.trainerId || !item.subscriptionId) return false;
+            if (item.status === 'cancelled' || item.attendance === 'missed') return false;
+            if (!item.startAt) return false;
+
+            return sameDay(new Date(item.startAt), startAt);
+        });
+
+        if (!trainerWorkout?.startAt) return true;
+
+        const trainerTime = new Intl.DateTimeFormat(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(trainerWorkout.startAt));
+
+        return await new Promise<boolean>((resolve) => {
+            let settled = false;
+
+            const finish = (value: boolean) => {
+                if (settled) return;
+                settled = true;
+                resolve(value);
+            };
+
+            Alert.alert(
+                'На этот день уже есть тренировка с тренером',
+                `Занятие с тренером запланировано на ${trainerTime}. Соло можно добавить, но нагрузка в этот день будет выше.`,
+                [
+                    {
+                        text: 'Изменить дату',
+                        style: 'cancel',
+                        onPress: () => finish(false),
+                    },
+                    {
+                        text: 'Всё равно добавить',
+                        onPress: () => finish(true),
+                    },
+                ],
+                {
+                    cancelable: true,
+                    onDismiss: () => finish(false),
+                },
+            );
+        });
+    };
+
     const createWorkoutMutation = useMutation({
         mutationFn: async (data: Parameters<typeof createWorkout>[0]) => {
             const [created, exerciseLibrary] = await Promise.all([
@@ -258,6 +313,15 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) =>
     const onSubmit = handleSubmit(async (payload: CreateWorkoutFormData) => {
         if (!user) {
             return;
+        }
+
+        if (
+            payload.status === 'planned' &&
+            payload.startAt &&
+            !existingWorkout?.trainerId
+        ) {
+            const shouldContinue = await confirmTrainerDayConflict(payload.startAt);
+            if (!shouldContinue) return;
         }
 
         track('workout:editor_submitted', {
