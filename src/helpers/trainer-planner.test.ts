@@ -25,6 +25,9 @@ const onlyDates = (dates: string[]) => ({
     weekly: {},
     cycle: null,
     overrides: Object.fromEntries(dates.map((date) => [date, null])),
+});
+
+describe('trainer planner', () => {
     test('never creates a trainer workout in the past today', () => {
         const from = new Date('2026-09-29T18:07:00');
         const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
@@ -43,9 +46,7 @@ const onlyDates = (dates: string[]) => ({
             '2026-09-29',
         );
     });
-});
 
-describe('trainer planner', () => {
     test('builds a full future course with rest days', () => {
         const from = new Date('2026-09-29T12:00:00');
         const plan = buildTrainerPlan(trainer, 10, openEveryDay, [], from);
@@ -57,6 +58,7 @@ describe('trainer planner', () => {
             const gap = dayjs(plan.sessions[i].startAt)
                 .startOf('day')
                 .diff(dayjs(plan.sessions[i - 1].startAt).startOf('day'), 'day');
+
             expect(gap).toBeGreaterThanOrEqual(2);
         }
     });
@@ -115,7 +117,59 @@ describe('trainer planner', () => {
         );
     });
 
-    test('counts existing trainer workouts toward the weekly limit', () => {
+    test('keeps rest after a trainer workout from yesterday when replanning', () => {
+        const from = new Date('2026-10-12T08:00:00');
+        const existing = {
+            id: 'existing',
+            status: 'completed',
+            trainerId: 't1',
+            attendance: 'attended',
+            completedAt: new Date('2026-10-11T18:00:00'),
+            startedAt: new Date('2026-10-11T17:00:00'),
+            createdAt: new Date(),
+        };
+
+        const schedule = onlyDates([
+            '2026-10-12',
+            '2026-10-13',
+        ]);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, [existing], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
+            '2026-10-13',
+        );
+    });
+
+    test('counts earlier workouts in the current week toward trainer weekly limit', () => {
+        const from = new Date('2026-10-10T08:00:00');
+        const existing = [
+            '2026-10-05',
+            '2026-10-07',
+            '2026-10-09',
+        ].map((date, index) => ({
+            id: `existing-${index}`,
+            status: 'completed',
+            trainerId: 't1',
+            attendance: 'attended',
+            completedAt: new Date(`${date}T18:00:00`),
+            startedAt: new Date(`${date}T17:00:00`),
+            createdAt: new Date(),
+        }));
+
+        const schedule = onlyDates([
+            '2026-10-11',
+            '2026-10-12',
+        ]);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, existing, from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
+            '2026-10-12',
+        );
+    });
+
+    test('counts existing future trainer workouts toward the weekly limit', () => {
         const from = new Date('2026-10-05T12:00:00');
         const existing = [
             '2026-10-05',
