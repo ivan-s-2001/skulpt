@@ -40,6 +40,12 @@ export type ActiveSubscriptionModel = {
     workouts: WorkoutSelect[];
 };
 
+export type RebuildSubscriptionPlanResult = {
+    subscription: ActiveSubscriptionModel | null;
+    changed: boolean;
+    reason: 'replanned' | 'unchanged' | 'no_full_plan' | 'inactive';
+};
+
 const hydrateTrainer = (row: TrainerSelect): TrainerModel => ({
     ...row,
     schedule: parseTrainerSchedule(row.scheduleJson),
@@ -399,73 +405,18 @@ export const finishSubscriptionIfComplete = async (subscriptionId: string): Prom
     });
 };
 
-export const ensureSubscriptionPlanned = async (
-    subscriptionId: string,
-): Promise<ActiveSubscriptionModel | null> => {
-    const user = await getCurrentUser();
-    if (!user) return null;
-
-    const [rows, schedule, allWorkouts] = await Promise.all([
-        db.select().from(subscription).where(eq(subscription.id, subscriptionId)).limit(1),
-        getWorkSchedule(),
-        getWorkouts(),
-    ]);
-
-    const current = rows[0];
-    if (!current || current.status !== 'active') return null;
-
-    const [trainerRow] = await db
-        .select()
-        .from(trainer)
-        .where(eq(trainer.id, current.trainerId))
-        .limit(1);
-    if (!trainerRow) return null;
-
-    const trainerModel = hydrateTrainer(trainerRow);
-    const own = allWorkouts.filter((item) => item.subscriptionId === subscriptionId);
-    const attended = own.filter(
-        (item) => item.attendance === 'attended' || item.status === 'completed',
-    ).length;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const futurePlanned = own.filter(
-        (item) =>
-            item.attendance !== 'missed' &&
-            (item.status === 'planned' || item.status === 'in_progress') &&
-            item.startAt != null &&
-            new Date(item.startAt).getTime() >= today.getTime(),
-    ).length;
-
-    const missing = Math.max(0, current.targetSessions - attended - futurePlanned);
-    if (!missing) return await getActiveSubscription();
-
-    const plan = buildTrainerPlan(
-        trainerModel,
-        missing,
-        schedule.config,
-        allWorkouts,
-        new Date(),
-    );
-
-    for (const session of plan.sessions) {
-        await createSubscriptionWorkout({
-            userId: user.id,
-            trainer: trainerModel,
-            subscriptionId,
-            startAt: session.startAt,
-        });
-    }
-
-    return await getActiveSubscription();
-};
-
 export const rebuildFutureSubscriptionPlan = async (
     subscriptionId: string,
-): Promise<ActiveSubscriptionModel | null> => {
+    startDate: Date = new Date(),
+): Promise<RebuildSubscriptionPlanResult> => {
     const user = await getCurrentUser();
-    if (!user) return null;
+    if (!user) {
+        return {
+            subscription: null,
+            changed: false,
+            reason: 'inactive',
+        };
+    }
 
     const [rows, schedule, allWorkouts] = await Promise.all([
         db.select().from(subscription).where(eq(subscription.id, subscriptionId)).limit(1),
@@ -474,14 +425,27 @@ export const rebuildFutureSubscriptionPlan = async (
     ]);
 
     const current = rows[0];
-    if (!current || current.status !== 'active') return null;
+    if (!current || current.status !== 'active') {
+        return {
+            subscription: await getActiveSubscription(),
+            changed: false,
+            reason: 'inactive',
+        };
+    }
 
     const [trainerRow] = await db
         .select()
         .from(trainer)
         .where(eq(trainer.id, current.trainerId))
         .limit(1);
-    if (!trainerRow) return null;
+
+    if (!trainerRow) {
+        return {
+            subscription: await getActiveSubscription(),
+            changed: false,
+            reason: 'inactive',
+        };
+    }
 
     const trainerModel = hydrateTrainer(trainerRow);
     const own = allWorkouts.filter((item) => item.subscriptionId === subscriptionId);
@@ -491,20 +455,18 @@ export const rebuildFutureSubscriptionPlan = async (
     ).length;
 
     const inProgress = own.filter(
-        (item) =>
-            item.attendance !== 'missed' &&
-            item.status === 'in_progress',
+        (item) => item.attendance !== 'missed' && item.status === 'in_progress',
     );
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const from = new Date(startDate);
+    from.setHours(0, 0, 0, 0);
 
     const futurePlanned = own.filter(
         (item) =>
             item.attendance !== 'missed' &&
             item.status === 'planned' &&
             item.startAt != null &&
-            new Date(item.startAt).getTime() >= today.getTime(),
+            new Date(item.startAt).getTime() >= from.getTime(),
     );
 
     const remainingToPlan = Math.max(
@@ -522,11 +484,34 @@ export const rebuildFutureSubscriptionPlan = async (
         remainingToPlan,
         schedule.config,
         planningWorkouts,
-        new Date(),
+        startDate,
     );
 
     if (!plan.complete) {
-        return await getActiveSubscription();
+        return {
+            subscription: await getActiveSubscription(),
+            changed: false,
+            reason: 'no_full_plan',
+        };
+    }
+
+    const currentDates = futurePlanned
+        .map((item) => item.startAt?.getTime() ?? 0)
+        .sort((a, b) => a - b);
+    const nextDates = plan.sessions
+        .map((session) => session.startAt.getTime())
+        .sort((a, b) => a - b);
+
+    const unchanged =
+        currentDates.length === nextDates.length &&
+        currentDates.every((value, index) => value === nextDates[index]);
+
+    if (unchanged) {
+        return {
+            subscription: await getActiveSubscription(),
+            changed: false,
+            reason: 'unchanged',
+        };
     }
 
     for (const item of futurePlanned) {
@@ -542,7 +527,11 @@ export const rebuildFutureSubscriptionPlan = async (
         });
     }
 
-    return await getActiveSubscription();
+    return {
+        subscription: await getActiveSubscription(),
+        changed: true,
+        reason: 'replanned',
+    };
 };
 
 export const markSubscriptionWorkoutAttendedByWorkout = async (
@@ -586,7 +575,11 @@ export const setSubscriptionWorkoutAttendance = async (
             status: 'cancelled',
         });
 
-        await rebuildFutureSubscriptionPlan(item.subscriptionId);
+        const replanFrom = new Date(now);
+        replanFrom.setDate(replanFrom.getDate() + 1);
+        replanFrom.setHours(0, 0, 0, 0);
+
+        await rebuildFutureSubscriptionPlan(item.subscriptionId, replanFrom);
     }
 
     const [updated] = await db.select().from(workout).where(eq(workout.id, workoutId)).limit(1);
