@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -64,7 +64,6 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.typography,
         opacity: 1,
     },
-
 }));
 
 const ResultsScreen = () => {
@@ -73,6 +72,12 @@ const ResultsScreen = () => {
     const stats = useWorkoutStats();
     const { data: activeSubscription } = useActiveSubscription();
     const [isChartScrubbing, setIsChartScrubbing] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 60_000);
+        return () => clearInterval(timer);
+    }, []);
 
     const statsData = useMemo(() => {
         return [
@@ -140,10 +145,7 @@ const ResultsScreen = () => {
         const missed = activeSubscription.workouts.filter(
             (item) => item.attendance === 'missed',
         ).length;
-        const remaining = Math.max(
-            0,
-            activeSubscription.subscription.targetSessions - attended,
-        );
+        const remaining = Math.max(0, activeSubscription.subscription.targetSessions - attended);
         const next = activeSubscription.workouts
             .filter(
                 (item) =>
@@ -151,14 +153,11 @@ const ResultsScreen = () => {
                     (item.status === 'planned' || item.status === 'in_progress') &&
                     item.startAt,
             )
-            .sort(
-                (a, b) =>
-                    new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime(),
-            )
-            .find((item) => new Date(item.startAt!).getTime() >= Date.now());
+            .sort((a, b) => new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime())
+            .find((item) => new Date(item.startAt!).getTime() >= now);
 
         return { attended, missed, remaining, next };
-    }, [activeSubscription]);
+    }, [activeSubscription, now]);
 
     return (
         <ScrollView
@@ -208,9 +207,7 @@ const ResultsScreen = () => {
                                         </Text>
                                     </Box>
                                 </HStack>
-                                {index < statsData.length - 1 && (
-                                    <Box style={styles.divider} />
-                                )}
+                                {index < statsData.length - 1 && <Box style={styles.divider} />}
                             </VStack>
                         ))}
                     </VStack>

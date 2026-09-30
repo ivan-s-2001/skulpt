@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getWorkoutDateKey } from './workouts';
+import { getWorkoutDateKey } from './workout-date';
 
 const workout = (status, fields = {}) => ({
     status,
@@ -10,9 +10,7 @@ const workout = (status, fields = {}) => ({
 describe('getWorkoutDateKey', () => {
     test('uses the date that represents each workout status', () => {
         expect(
-            getWorkoutDateKey(
-                workout('planned', { startAt: new Date('2026-10-02T18:00:00') }),
-            ),
+            getWorkoutDateKey(workout('planned', { startAt: new Date('2026-10-02T18:00:00') })),
         ).toBe('2026-10-02');
 
         expect(

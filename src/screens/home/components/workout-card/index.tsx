@@ -116,11 +116,7 @@ const RightAction: FC<RightActionProps> = ({ drag, handleDelete }) => {
     return (
         <Reanimated.View style={[styles.rightAction, styleAnimation]}>
             <Pressable onPress={handleDelete}>
-                <Trash2
-                    color={theme.colors.neutral[50]}
-                    size={theme.space(6)}
-                    strokeWidth={1.75}
-                />
+                <Trash2 color={theme.colors.neutral[50]} size={theme.space(6)} strokeWidth={1.75} />
             </Pressable>
         </Reanimated.View>
     );
@@ -173,9 +169,8 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
 
     const markerColor = isMissed
         ? theme.colors.red[500]
-        : trainerColor || (workout.status === 'in_progress'
-              ? theme.colors.neutral[950]
-              : theme.colors.lime[400]);
+        : trainerColor ||
+          (workout.status === 'in_progress' ? theme.colors.neutral[950] : theme.colors.lime[400]);
 
     const card = (
         <Box style={styles.container(workout.status)}>
@@ -184,10 +179,7 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
                     <VStack style={styles.content}>
                         <HStack style={styles.workoutInfoContainer}>
                             <Text
-                                style={[
-                                    styles.status(workout.status),
-                                    styles.workoutInfoTextSize,
-                                ]}
+                                style={[styles.status(workout.status), styles.workoutInfoTextSize]}
                             >
                                 {isMissed && 'Пропущено'}
                                 {!isMissed &&
@@ -200,9 +192,7 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
                                         : t(`workoutStatus.${workout.status}`, {
                                               ns: 'common',
                                           }))}
-                                {!isMissed &&
-                                    workout.status === 'completed' &&
-                                    formattedDate}
+                                {!isMissed && workout.status === 'completed' && formattedDate}
                             </Text>
 
                             {sortedWorkoutTypes.length > 0 && !isMissed && (

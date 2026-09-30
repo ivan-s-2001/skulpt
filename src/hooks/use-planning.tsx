@@ -34,13 +34,8 @@ export const useUpdateTrainer = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({
-            id,
-            input,
-        }: {
-            id: string;
-            input: Parameters<typeof updateTrainer>[1];
-        }) => updateTrainer(id, input),
+        mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateTrainer>[1] }) =>
+            updateTrainer(id, input),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'trainers'] });
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
@@ -113,13 +108,11 @@ export const useSetSubscriptionWorkoutAttendance = () => {
     });
 };
 
-
 export const useRebuildSubscriptionPlan = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (subscriptionId: string) =>
-            rebuildFutureSubscriptionPlan(subscriptionId),
+        mutationFn: (subscriptionId: string) => rebuildFutureSubscriptionPlan(subscriptionId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['planning', 'subscription'] });
             queryClient.invalidateQueries({ queryKey: ['workouts'] });

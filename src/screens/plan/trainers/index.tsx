@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useState } from 'react';
+import { FC, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Plus, Trash2 } from 'lucide-react-native';
@@ -60,7 +60,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     }),
     chipText: (active: boolean) => ({
         color: theme.colors.typography,
-        fontWeight: active ? theme.fontWeight.semibold.fontWeight : theme.fontWeight.medium.fontWeight,
+        fontWeight: active
+            ? theme.fontWeight.semibold.fontWeight
+            : theme.fontWeight.medium.fontWeight,
     }),
     card: {
         backgroundColor: theme.colors.background,
@@ -147,20 +149,15 @@ const TrainersScreen: FC = () => {
         [selectedId, trainers],
     );
 
-    useEffect(() => {
-        if (!selected) {
-            setSelectedId(null);
-            setName('');
-            setColor(COLORS[0]);
-            setSchedule([]);
-            return;
-        }
+    const [formTrainerId, setFormTrainerId] = useState<string | null>(null);
+    const currentTrainerId = selected?.id ?? null;
 
-        if (selectedId !== selected.id) setSelectedId(selected.id);
-        setName(selected.name);
-        setColor(selected.color);
-        setSchedule(selected.schedule);
-    }, [selected?.id]);
+    if (formTrainerId !== currentTrainerId) {
+        setFormTrainerId(currentTrainerId);
+        setName(selected?.name ?? '');
+        setColor(selected?.color ?? COLORS[0]);
+        setSchedule(selected?.schedule ?? []);
+    }
 
     const slots = schedule
         .map((slot, index) => ({ slot, index }))
@@ -178,8 +175,7 @@ const TrainersScreen: FC = () => {
     const save = async () => {
         if (!selected) return;
 
-        const scheduleChanged =
-            JSON.stringify(schedule) !== JSON.stringify(selected.schedule);
+        const scheduleChanged = JSON.stringify(schedule) !== JSON.stringify(selected.schedule);
 
         await updateTrainer.mutateAsync({
             id: selected.id,
@@ -191,8 +187,7 @@ const TrainersScreen: FC = () => {
         });
 
         const affectsActiveSubscription =
-            scheduleChanged &&
-            activeSubscription?.trainer?.id === selected.id;
+            scheduleChanged && activeSubscription?.trainer?.id === selected.id;
 
         if (!affectsActiveSubscription || !activeSubscription) {
             Alert.alert('Сохранено', 'Данные тренера обновлены.');
@@ -215,10 +210,7 @@ const TrainersScreen: FC = () => {
                         );
 
                         if (result.reason === 'replanned') {
-                            Alert.alert(
-                                'Расписание обновлено',
-                                'Будущие занятия перестроены.',
-                            );
+                            Alert.alert('Расписание обновлено', 'Будущие занятия перестроены.');
                         } else if (result.reason === 'no_full_plan') {
                             Alert.alert(
                                 'Текущий план сохранён',
@@ -300,11 +292,12 @@ const TrainersScreen: FC = () => {
                         {trainers.map((trainer) => {
                             const active = trainer.id === selected?.id;
                             return (
-                                <Pressable key={trainer.id} onPress={() => setSelectedId(trainer.id)}>
+                                <Pressable
+                                    key={trainer.id}
+                                    onPress={() => setSelectedId(trainer.id)}
+                                >
                                     <Box style={styles.chip(active)}>
-                                        <Text style={styles.chipText(active)}>
-                                            {trainer.name}
-                                        </Text>
+                                        <Text style={styles.chipText(active)}>{trainer.name}</Text>
                                     </Box>
                                 </Pressable>
                             );
@@ -354,7 +347,8 @@ const TrainersScreen: FC = () => {
                                     <Pressable key={item.day} onPress={() => setDay(item.day)}>
                                         <Box style={styles.chip(active)}>
                                             <Text style={styles.chipText(active)}>
-                                                {item.label}{hasSlots ? ' •' : ''}
+                                                {item.label}
+                                                {hasSlots ? ' •' : ''}
                                             </Text>
                                         </Box>
                                     </Pressable>
@@ -397,17 +391,15 @@ const TrainersScreen: FC = () => {
                             <Button
                                 type="link"
                                 title="Добавить интервал"
-                                prefix={<Plus size={theme.space(4)} color={theme.colors.typography} />}
+                                prefix={
+                                    <Plus size={theme.space(4)} color={theme.colors.typography} />
+                                }
                                 onPress={addSlot}
                             />
                         </VStack>
                     </VStack>
 
-                    <Button
-                        title="Сохранить"
-                        loading={updateTrainer.isPending}
-                        onPress={save}
-                    />
+                    <Button title="Сохранить" loading={updateTrainer.isPending} onPress={save} />
                     <Button
                         type="link"
                         title="Удалить тренера"

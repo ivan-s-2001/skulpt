@@ -124,9 +124,7 @@ const toDate = (v: Date | null) => {
 const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) => {
     const { user } = useUser();
     const { t } = useTranslation(['common', 'screens']);
-    const [startDate, setStartDate] = useState(
-        Boolean(existingWorkout?.startAt || initialStartAt),
-    );
+    const [startDate, setStartDate] = useState(Boolean(existingWorkout?.startAt || initialStartAt));
     const { track } = useAnalytics();
     const { startWorkout } = useRunningWorkoutStatic();
     const { data: workouts = [] } = useWorkouts();
@@ -315,11 +313,7 @@ const EditorForm: FC<EditorFormProps> = ({ existingWorkout, initialStartAt }) =>
             return;
         }
 
-        if (
-            payload.status === 'planned' &&
-            payload.startAt &&
-            !existingWorkout?.trainerId
-        ) {
+        if (payload.status === 'planned' && payload.startAt && !existingWorkout?.trainerId) {
             const shouldContinue = await confirmTrainerDayConflict(payload.startAt);
             if (!shouldContinue) return;
         }

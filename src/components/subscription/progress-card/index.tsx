@@ -105,14 +105,9 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
         <VStack style={styles.card}>
             <HStack style={styles.header}>
                 <VStack style={styles.titleWrap}>
-                    <TrainerBadge
-                        name={trainerName}
-                        color={color}
-                    />
+                    <TrainerBadge name={trainerName} color={color} />
                     {!compact && (
-                        <Text style={styles.subtitle}>
-                            Активный абонемент · {target} занятий
-                        </Text>
+                        <Text style={styles.subtitle}>Активный абонемент · {target} занятий</Text>
                     )}
                 </VStack>
 
@@ -126,12 +121,7 @@ export const SubscriptionProgressCard: FC<SubscriptionProgressCardProps> = ({
             </HStack>
 
             <Box style={styles.progressTrack}>
-                <Box
-                    style={styles.progressFill(
-                        attended / Math.max(1, target),
-                        color,
-                    )}
-                />
+                <Box style={styles.progressFill(attended / Math.max(1, target), color)} />
             </Box>
 
             <HStack style={styles.metrics}>

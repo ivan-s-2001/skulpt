@@ -1,13 +1,8 @@
 import dayjs from 'dayjs';
 
 import { WorkoutSelect } from '@/db/schema';
-import { getWorkoutDateKey } from '@/helpers/workouts';
-import {
-    TrainerSlot,
-    WorkScheduleConfig,
-    WorkShift,
-    resolveWorkShift,
-} from '@/helpers/planning';
+import { getWorkoutDateKey } from '@/helpers/workout-date';
+import { TrainerSlot, WorkScheduleConfig, WorkShift, resolveWorkShift } from '@/helpers/planning';
 import type { TrainerModel } from '@/crud/planning';
 
 export type PlannedTrainerSession = {
@@ -69,26 +64,17 @@ const ceilToStep = (timestamp: number): number => {
     return Math.ceil(timestamp / stepMs) * stepMs;
 };
 
-const shiftBlock = (
-    dateKey: string,
-    shift: WorkShift,
-): [number, number] => {
+const shiftBlock = (dateKey: string, shift: WorkShift): [number, number] => {
     let start = atTime(dateKey, shift.start).getTime();
     let end = atTime(dateKey, shift.end).getTime();
 
     if (end <= start) end += 24 * 60 * 60 * 1000;
 
-    return [
-        start - TRAVEL_MINUTES * 60 * 1000,
-        end + TRAVEL_MINUTES * 60 * 1000,
-    ];
+    return [start - TRAVEL_MINUTES * 60 * 1000, end + TRAVEL_MINUTES * 60 * 1000];
 };
 
-const blockedWorkIntervals = (
-    config: WorkScheduleConfig,
-    dateKey: string,
-): Array<[number, number]> => {
-    const intervals: Array<[number, number]> = [];
+const blockedWorkIntervals = (config: WorkScheduleConfig, dateKey: string): [number, number][] => {
+    const intervals: [number, number][] = [];
 
     for (const offset of [-1, 0, 1]) {
         const key = dayjs(dateKey).add(offset, 'day').format('YYYY-MM-DD');
@@ -101,12 +87,12 @@ const blockedWorkIntervals = (
 
 const subtractIntervals = (
     base: [number, number],
-    blocks: Array<[number, number]>,
-): Array<[number, number]> => {
-    let segments: Array<[number, number]> = [base];
+    blocks: [number, number][],
+): [number, number][] => {
+    let segments: [number, number][] = [base];
 
     for (const block of blocks) {
-        const next: Array<[number, number]> = [];
+        const next: [number, number][] = [];
 
         for (const segment of segments) {
             if (block[0] >= segment[1] || block[1] <= segment[0]) {
@@ -222,10 +208,7 @@ const getWorkoutContext = (
     };
 };
 
-const candidateBasePenalty = (
-    date: dayjs.Dayjs,
-    context: WorkoutContext,
-): number => {
+const candidateBasePenalty = (date: dayjs.Dayjs, context: WorkoutContext): number => {
     let penalty = 0;
 
     if (context.occupiedDates.has(date.subtract(1, 'day').format('YYYY-MM-DD'))) {
@@ -238,10 +221,7 @@ const candidateBasePenalty = (
     return penalty;
 };
 
-const gapPenalty = (
-    previous: CandidateSession | null,
-    current: CandidateSession,
-): number => {
+const gapPenalty = (previous: CandidateSession | null, current: CandidateSession): number => {
     if (!previous) return 0;
 
     const gap = current.day.diff(previous.day, 'day');
@@ -308,30 +288,21 @@ const optimizeCourse = (
 
             if (state.selected.length >= target) continue;
 
-            const previous =
-                state.lastIndex >= 0 ? candidates[state.lastIndex] : null;
+            const previous = state.lastIndex >= 0 ? candidates[state.lastIndex] : null;
 
-            if (
-                previous &&
-                currentCandidate.day.diff(previous.day, 'day') < 2
-            ) {
+            if (previous && currentCandidate.day.diff(previous.day, 'day') < 2) {
                 continue;
             }
 
             const existingTrainerCount =
                 context.trainerWeekCounts.get(currentCandidate.weekKey) ?? 0;
-            if (
-                existingTrainerCount + normalizedWeekCount >=
-                MAX_TRAINER_PER_WEEK
-            ) {
+            if (existingTrainerCount + normalizedWeekCount >= MAX_TRAINER_PER_WEEK) {
                 continue;
             }
 
             const totalBefore =
-                (context.totalWeekCounts.get(currentCandidate.weekKey) ?? 0) +
-                normalizedWeekCount;
-            const overloadPenalty =
-                Math.max(0, totalBefore + 1 - MAX_TOTAL_WORKOUTS_PER_WEEK) * 2;
+                (context.totalWeekCounts.get(currentCandidate.weekKey) ?? 0) + normalizedWeekCount;
+            const overloadPenalty = Math.max(0, totalBefore + 1 - MAX_TOTAL_WORKOUTS_PER_WEEK) * 2;
 
             put({
                 selected: [...state.selected, index],
@@ -368,29 +339,31 @@ const optimizeCourse = (
 
     if (completed[0]) return completed[0];
 
-    return [...states.values()].sort((a, b) => {
-        if (a.selected.length !== b.selected.length) {
-            return b.selected.length - a.selected.length;
+    return (
+        [...states.values()].sort((a, b) => {
+            if (a.selected.length !== b.selected.length) {
+                return b.selected.length - a.selected.length;
+            }
+            if (a.penalty !== b.penalty) return a.penalty - b.penalty;
+
+            const aFinish =
+                a.lastIndex >= 0
+                    ? candidates[a.lastIndex].endAt.getTime()
+                    : Number.POSITIVE_INFINITY;
+            const bFinish =
+                b.lastIndex >= 0
+                    ? candidates[b.lastIndex].endAt.getTime()
+                    : Number.POSITIVE_INFINITY;
+
+            return aFinish - bFinish;
+        })[0] ?? {
+            selected: [],
+            penalty: 0,
+            lastIndex: -1,
+            weekKey: null,
+            weekCount: 0,
         }
-        if (a.penalty !== b.penalty) return a.penalty - b.penalty;
-
-        const aFinish =
-            a.lastIndex >= 0
-                ? candidates[a.lastIndex].endAt.getTime()
-                : Number.POSITIVE_INFINITY;
-        const bFinish =
-            b.lastIndex >= 0
-                ? candidates[b.lastIndex].endAt.getTime()
-                : Number.POSITIVE_INFINITY;
-
-        return aFinish - bFinish;
-    })[0] ?? {
-        selected: [],
-        penalty: 0,
-        lastIndex: -1,
-        weekKey: null,
-        weekCount: 0,
-    };
+    );
 };
 
 export const buildTrainerPlan = (
@@ -418,22 +391,12 @@ export const buildTrainerPlan = (
 
         if (context.occupiedDates.has(dateKey)) continue;
 
-        if (
-            context.trainerDates.some(
-                (existing) => Math.abs(date.diff(existing, 'day')) < 2,
-            )
-        ) {
+        if (context.trainerDates.some((existing) => Math.abs(date.diff(existing, 'day')) < 2)) {
             continue;
         }
 
-        const notBefore =
-            dateKey === from.format('YYYY-MM-DD') ? startMoment.toDate() : undefined;
-        const session = findSessionForDate(
-            trainer.schedule,
-            config,
-            dateKey,
-            notBefore,
-        );
+        const notBefore = dateKey === from.format('YYYY-MM-DD') ? startMoment.toDate() : undefined;
+        const session = findSessionForDate(trainer.schedule, config, dateKey, notBefore);
         if (!session) continue;
 
         candidates.push({

@@ -52,9 +52,9 @@ export const Header: FC = () => {
     const trainer = useMemo(
         () =>
             workout?.trainerId
-                ? trainers.find((item) => item.id === workout.trainerId) ?? null
+                ? (trainers.find((item) => item.id === workout.trainerId) ?? null)
                 : null,
-        [trainers, workout?.trainerId],
+        [trainers, workout],
     );
 
     const title = useMemo(() => {
@@ -71,14 +71,7 @@ export const Header: FC = () => {
             return t(`workoutStatus.${workout.status}`, { ns: 'common' });
         }
         return null;
-    }, [
-        elapsedFormated,
-        elapsedSeconds,
-        isEditMode,
-        t,
-        workout?.attendance,
-        workout?.status,
-    ]);
+    }, [elapsedFormated, elapsedSeconds, isEditMode, t, workout]);
 
     return (
         <Box style={styles.container}>
@@ -91,13 +84,7 @@ export const Header: FC = () => {
                     {workout?.name}
                 </Title>
 
-                {trainer && (
-                    <TrainerBadge
-                        name={trainer.name}
-                        color={trainer.color}
-                        onAccent
-                    />
-                )}
+                {trainer && <TrainerBadge name={trainer.name} color={trainer.color} onAccent />}
             </VStack>
         </Box>
     );

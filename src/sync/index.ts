@@ -62,18 +62,14 @@ const summarizeBatchData = (batchData: SyncBatchRequest) =>
                 created: changes.created.length,
                 updated: changes.updated.length,
                 deleted: changes.deleted.length,
-                sampleCreatedIds: changes.created
-                    .slice(0, 2)
-                    .map((record) => {
-                        const value = record as Record<string, unknown>;
-                        return String(value.id ?? value.userId ?? '');
-                    }),
-                sampleUpdatedIds: changes.updated
-                    .slice(0, 2)
-                    .map((record) => {
-                        const value = record as Record<string, unknown>;
-                        return String(value.id ?? value.userId ?? '');
-                    }),
+                sampleCreatedIds: changes.created.slice(0, 2).map((record) => {
+                    const value = record as Record<string, unknown>;
+                    return String(value.id ?? value.userId ?? '');
+                }),
+                sampleUpdatedIds: changes.updated.slice(0, 2).map((record) => {
+                    const value = record as Record<string, unknown>;
+                    return String(value.id ?? value.userId ?? '');
+                }),
                 sampleUpdatedKeys:
                     changes.updated.length > 0
                         ? Object.keys(changes.updated[0] as Record<string, unknown>).sort()

@@ -1,4 +1,3 @@
-
 import { Stack } from '@/navigators/stack';
 import { useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';

@@ -99,11 +99,7 @@ const updateSubscriptionRow = async (
 ): Promise<SubscriptionSelect> => {
     await db.update(subscription).set(updates).where(eq(subscription.id, id));
 
-    const [updated] = await db
-        .select()
-        .from(subscription)
-        .where(eq(subscription.id, id))
-        .limit(1);
+    const [updated] = await db.select().from(subscription).where(eq(subscription.id, id)).limit(1);
 
     if (!updated) throw new Error('Subscription not found after update');
 
@@ -186,11 +182,7 @@ export const deleteTrainer = async (id: string): Promise<void> => {
             .from(subscription)
             .where(eq(subscription.trainerId, id))
             .limit(1),
-        db
-            .select({ id: workout.id })
-            .from(workout)
-            .where(eq(workout.trainerId, id))
-            .limit(1),
+        db.select({ id: workout.id }).from(workout).where(eq(workout.trainerId, id)).limit(1),
     ]);
 
     if (linkedSubscription.length || linkedWorkout.length) {
@@ -222,9 +214,7 @@ export const getWorkSchedule = async (): Promise<WorkScheduleModel> => {
     };
 };
 
-export const saveWorkSchedule = async (
-    config: WorkScheduleConfig,
-): Promise<WorkScheduleModel> => {
+export const saveWorkSchedule = async (config: WorkScheduleConfig): Promise<WorkScheduleModel> => {
     const user = await getCurrentUser();
     if (!user) throw new Error('Current user not found');
 
@@ -316,7 +306,7 @@ const createSubscriptionWorkout = async (input: {
 export const createSubscription = async (input: {
     trainerId: string;
     targetSessions: number;
-    sessions: Array<{ startAt: Date; endAt: Date }>;
+    sessions: { startAt: Date; endAt: Date }[];
 }): Promise<ActiveSubscriptionModel> => {
     const user = await getCurrentUser();
     if (!user) throw new Error('Current user not found');
@@ -342,12 +332,7 @@ export const createSubscription = async (input: {
         const planned = await db
             .select()
             .from(workout)
-            .where(
-                and(
-                    eq(workout.subscriptionId, current.id),
-                    eq(workout.status, 'planned'),
-                ),
-            );
+            .where(and(eq(workout.subscriptionId, current.id), eq(workout.status, 'planned')));
 
         for (const item of planned) {
             await updateWorkout(item.id, { status: 'cancelled' });
@@ -489,11 +474,7 @@ export const rebuildFutureSubscriptionPlan = async (
     );
 
     const protectedCurrentPlanned = own.filter((item) => {
-        if (
-            item.attendance === 'missed' ||
-            item.status !== 'planned' ||
-            !item.startAt
-        ) {
+        if (item.attendance === 'missed' || item.status !== 'planned' || !item.startAt) {
             return false;
         }
 
@@ -506,16 +487,11 @@ export const rebuildFutureSubscriptionPlan = async (
 
     const remainingToPlan = Math.max(
         0,
-        current.targetSessions -
-            attended -
-            inProgress.length -
-            protectedCurrentPlanned,
+        current.targetSessions - attended - inProgress.length - protectedCurrentPlanned,
     );
 
     const futurePlannedIds = new Set(futurePlanned.map((item) => item.id));
-    const planningWorkouts = allWorkouts.filter(
-        (item) => !futurePlannedIds.has(item.id),
-    );
+    const planningWorkouts = allWorkouts.filter((item) => !futurePlannedIds.has(item.id));
 
     const plan = buildTrainerPlan(
         trainerModel,
@@ -602,9 +578,7 @@ export const setSubscriptionWorkoutAttendance = async (
         const startedAt = item.startedAt ?? item.startAt ?? now;
         const completedAt =
             item.completedAt ??
-            (item.startedAt
-                ? now
-                : new Date(startedAt.getTime() + 60 * 60 * 1000));
+            (item.startedAt ? now : new Date(startedAt.getTime() + 60 * 60 * 1000));
 
         await updateWorkout(workoutId, {
             attendance: 'attended',

@@ -37,11 +37,18 @@ export const backfillSyncQueue = async (): Promise<void> => {
         .from(syncQueue)
         .where(eq(syncQueue.synced, 0));
 
-    const alreadyQueued = new Set(existingEntries.map((entry) => `${entry.tableName}:${entry.recordId}`));
+    const alreadyQueued = new Set(
+        existingEntries.map((entry) => `${entry.tableName}:${entry.recordId}`),
+    );
 
     const tables: BackfillTable[] = [
         { name: 'user', table: user, updatedAtCol: user.updatedAt, getRecordId: (row) => row.id },
-        { name: 'trainer', table: trainer, updatedAtCol: trainer.updatedAt, getRecordId: (row) => row.id },
+        {
+            name: 'trainer',
+            table: trainer,
+            updatedAtCol: trainer.updatedAt,
+            getRecordId: (row) => row.id,
+        },
         {
             name: 'subscription',
             table: subscription,
@@ -54,7 +61,12 @@ export const backfillSyncQueue = async (): Promise<void> => {
             updatedAtCol: workSchedule.updatedAt,
             getRecordId: (row) => row.userId,
         },
-        { name: 'workout', table: workout, updatedAtCol: workout.updatedAt, getRecordId: (row) => row.id },
+        {
+            name: 'workout',
+            table: workout,
+            updatedAtCol: workout.updatedAt,
+            getRecordId: (row) => row.id,
+        },
         {
             name: 'workout_group',
             table: workoutGroup,
@@ -101,9 +113,7 @@ export const backfillSyncQueue = async (): Promise<void> => {
             toQueue.map((row: any) => ({
                 tableName: name,
                 recordId: getRecordId(row),
-                operation: (row.createdAt > lastSync ? 'create' : 'update') as
-                    | 'create'
-                    | 'update',
+                operation: (row.createdAt > lastSync ? 'create' : 'update') as 'create' | 'update',
                 timestamp: row.updatedAt as Date,
                 data: row,
             })),
@@ -126,9 +136,7 @@ export const backfillSyncQueue = async (): Promise<void> => {
             exercisesToQueue.map((row) => ({
                 tableName: 'exercise',
                 recordId: row.id,
-                operation: (row.createdAt > lastSync ? 'create' : 'update') as
-                    | 'create'
-                    | 'update',
+                operation: (row.createdAt > lastSync ? 'create' : 'update') as 'create' | 'update',
                 timestamp: row.updatedAt,
                 data: row as unknown as Record<string, unknown>,
             })),

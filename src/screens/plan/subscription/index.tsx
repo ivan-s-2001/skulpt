@@ -1,4 +1,5 @@
 import { FC, useMemo, useState } from 'react';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 import { Alert } from 'react-native';
 import dayjs from 'dayjs';
 import { router } from 'expo-router';
@@ -180,21 +181,15 @@ const SubscriptionScreen: FC = () => {
 
     const hasSchedule = Boolean(
         workSchedule &&
-            (Object.keys(workSchedule.config.weekly).length ||
-                workSchedule.config.cycle ||
-                Object.keys(workSchedule.config.overrides).length),
+        (Object.keys(workSchedule.config.weekly).length ||
+            workSchedule.config.cycle ||
+            Object.keys(workSchedule.config.overrides).length),
     );
 
     const plans = useMemo(() => {
         if (!workSchedule || !hasSchedule || !target) return [];
 
-        return buildTrainerPlans(
-            trainers,
-            target,
-            workSchedule.config,
-            workouts,
-            new Date(),
-        );
+        return buildTrainerPlans(trainers, target, workSchedule.config, workouts, new Date());
     }, [hasSchedule, target, trainers, workSchedule, workouts]);
 
     const selectedPlan =
@@ -208,16 +203,12 @@ const SubscriptionScreen: FC = () => {
 
     if (active) {
         const courseWorkouts = active.workouts
-            .filter(
-                (item) =>
-                    item.status !== 'cancelled' ||
-                    item.attendance === 'missed',
-            )
+            .filter((item) => item.status !== 'cancelled' || item.attendance === 'missed')
             .sort((a, b) => {
-            const aTime = a.startAt ? new Date(a.startAt).getTime() : 0;
-            const bTime = b.startAt ? new Date(b.startAt).getTime() : 0;
-            return aTime - bTime;
-        });
+                const aTime = a.startAt ? new Date(a.startAt).getTime() : 0;
+                const bTime = b.startAt ? new Date(b.startAt).getTime() : 0;
+                return aTime - bTime;
+            });
 
         const attended = courseWorkouts.filter(
             (item) => item.attendance === 'attended' || item.status === 'completed',
@@ -258,9 +249,7 @@ const SubscriptionScreen: FC = () => {
                                 !isAttended &&
                                 !isMissed &&
                                 item.startAt != null &&
-                                dayjs(item.startAt)
-                                    .add(60, 'minute')
-                                    .isBefore(dayjs());
+                                dayjs(item.startAt).add(60, 'minute').isBefore(dayjs());
 
                             const status = isAttended
                                 ? 'Посещено'
@@ -315,7 +304,9 @@ const SubscriptionScreen: FC = () => {
                                                                     size={theme.space(4)}
                                                                     color={theme.colors.typography}
                                                                 />
-                                                                <Text style={styles.compactActionText}>
+                                                                <Text
+                                                                    style={styles.compactActionText}
+                                                                >
                                                                     Ходил
                                                                 </Text>
                                                             </HStack>
@@ -340,7 +331,9 @@ const SubscriptionScreen: FC = () => {
                                                                     size={theme.space(4)}
                                                                     color={theme.colors.typography}
                                                                 />
-                                                                <Text style={styles.compactActionText}>
+                                                                <Text
+                                                                    style={styles.compactActionText}
+                                                                >
                                                                     Не ходил
                                                                 </Text>
                                                             </HStack>
@@ -424,8 +417,8 @@ const SubscriptionScreen: FC = () => {
             <VStack style={styles.card}>
                 <Text style={styles.title}>Создать абонемент</Text>
                 <Text style={styles.subtitle}>
-                    Укажи количество занятий. Skulpt найдёт пересечения твоего графика с
-                    расписанием тренеров и сразу создаст будущие тренировки.
+                    Укажи количество занятий. Skulpt найдёт пересечения твоего графика с расписанием
+                    тренеров и сразу создаст будущие тренировки.
                 </Text>
             </VStack>
 
@@ -464,7 +457,9 @@ const SubscriptionScreen: FC = () => {
                             type="link"
                             size="sm"
                             title={trainers.length ? `${trainers.length}` : 'Добавить'}
-                            onPress={() => router.navigate('/subscription-settings/trainers' as any)}
+                            onPress={() =>
+                                router.navigate('/subscription-settings/trainers' as any)
+                            }
                         />
                     </HStack>
                 </VStack>
@@ -477,8 +472,8 @@ const SubscriptionScreen: FC = () => {
                     {plans.length === 0 && (
                         <VStack style={styles.card}>
                             <Text style={styles.subtitle}>
-                                У добавленных тренеров пока нет рабочего времени.
-                                Укажи дни и часы, чтобы Skulpt смог найти пересечения.
+                                У добавленных тренеров пока нет рабочего времени. Укажи дни и часы,
+                                чтобы Skulpt смог найти пересечения.
                             </Text>
                             <Button
                                 type="link"
@@ -505,7 +500,8 @@ const SubscriptionScreen: FC = () => {
                                     >
                                         <Box style={styles.chip(activeChip)}>
                                             <Text style={styles.chipText(activeChip)}>
-                                                {plan.trainer.name} · {plan.sessions.length}/{target}
+                                                {plan.trainer.name} · {plan.sessions.length}/
+                                                {target}
                                                 {index === 0 ? ' · по графику' : ''}
                                             </Text>
                                         </Box>
@@ -563,9 +559,7 @@ const SubscriptionScreen: FC = () => {
                                             ? 'Свернуть'
                                             : `Показать все (${selectedPlan.sessions.length})`
                                     }
-                                    onPress={() =>
-                                        setShowAllPreview((current) => !current)
-                                    }
+                                    onPress={() => setShowAllPreview((current) => !current)}
                                 />
                             )}
 
@@ -579,8 +573,8 @@ const SubscriptionScreen: FC = () => {
                             {!selectedPlan.complete && !selectedPlan.missingSchedule && (
                                 <Text style={styles.warning}>
                                     По текущим пересечениям получается только{' '}
-                                    {selectedPlan.sessions.length} из {target} занятий.
-                                    Измени личный график или рабочее время тренера.
+                                    {selectedPlan.sessions.length} из {target} занятий. Измени
+                                    личный график или рабочее время тренера.
                                 </Text>
                             )}
 

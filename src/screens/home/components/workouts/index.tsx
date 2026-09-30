@@ -36,7 +36,7 @@ const getWorkoutTimestamp = (workout: WorkoutSelect): number => {
             ? workout.startAt
             : workout.status === 'completed'
               ? workout.completedAt
-              : workout.startedAt ?? workout.startAt ?? workout.createdAt;
+              : (workout.startedAt ?? workout.startAt ?? workout.createdAt);
 
     return date ? new Date(date).getTime() : 0;
 };
@@ -116,11 +116,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     },
 }));
 
-export const Workouts: FC<WorkoutsProps> = ({
-    workouts,
-    firstWeekday,
-    workoutsOverviewMeta,
-}) => {
+export const Workouts: FC<WorkoutsProps> = ({ workouts, firstWeekday, workoutsOverviewMeta }) => {
     const { t, i18n } = useTranslation(['screens']);
     const router = useRouter();
     const { runningWorkout } = useRunningWorkoutStatic();
@@ -142,10 +138,7 @@ export const Workouts: FC<WorkoutsProps> = ({
     );
 
     const trainerColorById = useMemo(
-        () =>
-            Object.fromEntries(
-                trainers.map((trainer) => [trainer.id, trainer.color]),
-            ),
+        () => Object.fromEntries(trainers.map((trainer) => [trainer.id, trainer.color])),
         [trainers],
     );
 
@@ -153,10 +146,7 @@ export const Workouts: FC<WorkoutsProps> = ({
         () =>
             workouts
                 .filter((workout) => {
-                    if (
-                        workout.status === 'cancelled' &&
-                        workout.attendance !== 'missed'
-                    ) {
+                    if (workout.status === 'cancelled' && workout.attendance !== 'missed') {
                         return false;
                     }
                     return getWorkoutDateKey(workout) === selectedDate;
@@ -188,11 +178,7 @@ export const Workouts: FC<WorkoutsProps> = ({
     }, [i18n.language, selectedDate, t]);
 
     const selectedShift = useMemo(
-        () =>
-            resolveWorkShift(
-                workSchedule?.config ?? EMPTY_WORK_SCHEDULE,
-                selectedDate,
-            ),
+        () => resolveWorkShift(workSchedule?.config ?? EMPTY_WORK_SCHEDULE, selectedDate),
         [selectedDate, workSchedule?.config],
     );
 
@@ -209,16 +195,9 @@ export const Workouts: FC<WorkoutsProps> = ({
     }, [selectedWorkouts.length]);
 
     const openSoloEditor = useCallback(() => {
-        let startAt = dayjs(selectedDate)
-            .hour(18)
-            .minute(0)
-            .second(0)
-            .millisecond(0);
+        let startAt = dayjs(selectedDate).hour(18).minute(0).second(0).millisecond(0);
 
-        if (
-            selectedDate === dayjs().format('YYYY-MM-DD') &&
-            startAt.isBefore(dayjs())
-        ) {
+        if (selectedDate === dayjs().format('YYYY-MM-DD') && startAt.isBefore(dayjs())) {
             startAt = dayjs().add(1, 'hour').startOf('hour');
         }
 
@@ -235,8 +214,7 @@ export const Workouts: FC<WorkoutsProps> = ({
             (workout) =>
                 Boolean(workout.subscriptionId && workout.trainerId) &&
                 workout.attendance !== 'missed' &&
-                (workout.status === 'planned' ||
-                    workout.status === 'in_progress'),
+                (workout.status === 'planned' || workout.status === 'in_progress'),
         );
 
         if (!hasTrainerWorkout) {
@@ -274,23 +252,12 @@ export const Workouts: FC<WorkoutsProps> = ({
                 <VStack style={styles.selectedDayContainer}>
                     <HStack style={styles.selectedDayHeader}>
                         <VStack style={styles.selectedDayText}>
-                            <Text style={styles.selectedDayTitle}>
-                                {selectedDayTitle}
-                            </Text>
-                            <Text style={styles.selectedDayMeta}>
-                                {selectedDayScheduleLabel}
-                            </Text>
-                            <Text style={styles.selectedDaySubtitle}>
-                                {selectedDaySubtitle}
-                            </Text>
+                            <Text style={styles.selectedDayTitle}>{selectedDayTitle}</Text>
+                            <Text style={styles.selectedDayMeta}>{selectedDayScheduleLabel}</Text>
+                            <Text style={styles.selectedDaySubtitle}>{selectedDaySubtitle}</Text>
                         </VStack>
 
-                        <Button
-                            type="link"
-                            size="sm"
-                            title="+ Соло"
-                            onPress={handleAddSolo}
-                        />
+                        <Button type="link" size="sm" title="+ Соло" onPress={handleAddSolo} />
                     </HStack>
                 </VStack>
             </VStack>
@@ -321,12 +288,8 @@ export const Workouts: FC<WorkoutsProps> = ({
                         onPress={handleWorkoutPress}
                         activeElapsedFormatted={activeElapsedFormatted}
                         overviewMeta={workoutsOverviewMeta[item.id]}
-                        trainerName={
-                            item.trainerId ? trainerById[item.trainerId]?.name : null
-                        }
-                        trainerColor={
-                            item.trainerId ? trainerById[item.trainerId]?.color : null
-                        }
+                        trainerName={item.trainerId ? trainerById[item.trainerId]?.name : null}
+                        trainerColor={item.trainerId ? trainerById[item.trainerId]?.color : null}
                     />
                 </Box>
             );

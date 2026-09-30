@@ -173,10 +173,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
         >();
 
         workouts.forEach((workout) => {
-            if (
-                workout.status === 'cancelled' &&
-                workout.attendance !== 'missed'
-            ) {
+            if (workout.status === 'cancelled' && workout.attendance !== 'missed') {
                 return;
             }
 
@@ -210,10 +207,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
         return map;
     }, [trainerColorById, workouts]);
 
-    const selected = useMemo(
-        () => dayjs(selectedDate).startOf('day'),
-        [selectedDate],
-    );
+    const selected = useMemo(() => dayjs(selectedDate).startOf('day'), [selectedDate]);
 
     const weekDays = useMemo(() => {
         const today = dayjs();
@@ -240,15 +234,9 @@ export const WeekStats: FC<WeekStatsProps> = ({
         });
     }, [firstWeekday, i18n.language, selected, selectedDate, workoutStateByDate]);
 
-    const weekStart = useMemo(
-        () => getWeekStart(selected, firstWeekday),
-        [firstWeekday, selected],
-    );
+    const weekStart = useMemo(() => getWeekStart(selected, firstWeekday), [firstWeekday, selected]);
     const weekEnd = useMemo(() => weekStart.add(6, 'day'), [weekStart]);
-    const todayWeekStart = useMemo(
-        () => getWeekStart(dayjs(), firstWeekday),
-        [firstWeekday],
-    );
+    const todayWeekStart = useMemo(() => getWeekStart(dayjs(), firstWeekday), [firstWeekday]);
     const isCurrentWeek = weekStart.isSame(todayWeekStart, 'day');
 
     const weekLabel = useMemo(() => {
@@ -264,9 +252,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
     }, [i18n.language, weekEnd, weekStart]);
 
     const moveWeek = (direction: -1 | 1) => {
-        onSelectDate(
-            selected.add(direction * 7, 'day').format('YYYY-MM-DD'),
-        );
+        onSelectDate(selected.add(direction * 7, 'day').format('YYYY-MM-DD'));
     };
 
     return (
@@ -276,35 +262,21 @@ export const WeekStats: FC<WeekStatsProps> = ({
                     <Text style={styles.navTitle}>{weekLabel}</Text>
 
                     <HStack style={styles.navActions}>
-                        <Pressable
-                            style={styles.navButton}
-                            onPress={() => moveWeek(-1)}
-                        >
-                            <ChevronLeft
-                                size={theme.space(5)}
-                                color={theme.colors.typography}
-                            />
+                        <Pressable style={styles.navButton} onPress={() => moveWeek(-1)}>
+                            <ChevronLeft size={theme.space(5)} color={theme.colors.typography} />
                         </Pressable>
 
                         {!isCurrentWeek && (
                             <Pressable
                                 style={styles.todayButton}
-                                onPress={() =>
-                                    onSelectDate(dayjs().format('YYYY-MM-DD'))
-                                }
+                                onPress={() => onSelectDate(dayjs().format('YYYY-MM-DD'))}
                             >
                                 <Text style={styles.todayText}>Сегодня</Text>
                             </Pressable>
                         )}
 
-                        <Pressable
-                            style={styles.navButton}
-                            onPress={() => moveWeek(1)}
-                        >
-                            <ChevronRight
-                                size={theme.space(5)}
-                                color={theme.colors.typography}
-                            />
+                        <Pressable style={styles.navButton} onPress={() => moveWeek(1)}>
+                            <ChevronRight size={theme.space(5)} color={theme.colors.typography} />
                         </Pressable>
                     </HStack>
                 </HStack>
@@ -329,9 +301,7 @@ export const WeekStats: FC<WeekStatsProps> = ({
                         const state = item.state;
                         const hasPlanned = Boolean(state?.planned || state?.inProgress);
                         const onlyCompleted = Boolean(
-                            state?.completed &&
-                                !hasPlanned &&
-                                !state.missed,
+                            state?.completed && !hasPlanned && !state.missed,
                         );
 
                         const indicators: string[] = [];

@@ -42,9 +42,7 @@ describe('trainer planner', () => {
         const from = new Date('2026-09-29T20:20:00');
         const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe(
-            '2026-09-29',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe('2026-09-29');
     });
 
     test('builds a full future course with rest days', () => {
@@ -73,23 +71,15 @@ describe('trainer planner', () => {
 
         const plan = buildTrainerPlan(trainer, 2, openEveryDay, [workout], from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe(
-            '2026-09-29',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe('2026-09-29');
     });
 
     test('chooses the best whole course instead of the first feasible dates', () => {
         const from = new Date('2026-09-29T12:00:00');
-        const schedule = onlyDates([
-            '2026-09-29',
-            '2026-10-09',
-            '2026-10-11',
-        ]);
+        const schedule = onlyDates(['2026-09-29', '2026-10-09', '2026-10-11']);
 
         const plan = buildTrainerPlan(trainer, 2, schedule, [], from);
-        const dates = plan.sessions.map((session) =>
-            dayjs(session.startAt).format('YYYY-MM-DD'),
-        );
+        const dates = plan.sessions.map((session) => dayjs(session.startAt).format('YYYY-MM-DD'));
 
         expect(dates).toEqual(['2026-10-09', '2026-10-11']);
     });
@@ -104,17 +94,11 @@ describe('trainer planner', () => {
             createdAt: new Date(),
         };
 
-        const schedule = onlyDates([
-            '2026-10-11',
-            '2026-10-12',
-            '2026-10-13',
-        ]);
+        const schedule = onlyDates(['2026-10-11', '2026-10-12', '2026-10-13']);
 
         const plan = buildTrainerPlan(trainer, 1, schedule, [existing], from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
-            '2026-10-12',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
     });
 
     test('keeps rest after a trainer workout from yesterday when replanning', () => {
@@ -129,25 +113,16 @@ describe('trainer planner', () => {
             createdAt: new Date(),
         };
 
-        const schedule = onlyDates([
-            '2026-10-12',
-            '2026-10-13',
-        ]);
+        const schedule = onlyDates(['2026-10-12', '2026-10-13']);
 
         const plan = buildTrainerPlan(trainer, 1, schedule, [existing], from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
-            '2026-10-13',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-13');
     });
 
     test('counts earlier workouts in the current week toward trainer weekly limit', () => {
         const from = new Date('2026-10-10T08:00:00');
-        const existing = [
-            '2026-10-05',
-            '2026-10-07',
-            '2026-10-09',
-        ].map((date, index) => ({
+        const existing = ['2026-10-05', '2026-10-07', '2026-10-09'].map((date, index) => ({
             id: `existing-${index}`,
             status: 'completed',
             trainerId: 't1',
@@ -157,25 +132,16 @@ describe('trainer planner', () => {
             createdAt: new Date(),
         }));
 
-        const schedule = onlyDates([
-            '2026-10-11',
-            '2026-10-12',
-        ]);
+        const schedule = onlyDates(['2026-10-11', '2026-10-12']);
 
         const plan = buildTrainerPlan(trainer, 1, schedule, existing, from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
-            '2026-10-12',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
     });
 
     test('counts existing future trainer workouts toward the weekly limit', () => {
         const from = new Date('2026-10-05T12:00:00');
-        const existing = [
-            '2026-10-05',
-            '2026-10-07',
-            '2026-10-09',
-        ].map((date, index) => ({
+        const existing = ['2026-10-05', '2026-10-07', '2026-10-09'].map((date, index) => ({
             id: `existing-${index}`,
             status: 'planned',
             trainerId: 't1',
@@ -183,15 +149,10 @@ describe('trainer planner', () => {
             createdAt: new Date(),
         }));
 
-        const schedule = onlyDates([
-            '2026-10-11',
-            '2026-10-12',
-        ]);
+        const schedule = onlyDates(['2026-10-11', '2026-10-12']);
 
         const plan = buildTrainerPlan(trainer, 1, schedule, existing, from);
 
-        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe(
-            '2026-10-12',
-        );
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
     });
 });

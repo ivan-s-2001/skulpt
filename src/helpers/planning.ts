@@ -15,7 +15,7 @@ export type WorkScheduleConfig = {
     weekly: Record<string, WorkShift | null>;
     cycle: {
         startDate: string;
-        days: Array<WorkShift | null>;
+        days: (WorkShift | null)[];
     } | null;
     overrides: Record<string, WorkShift | null>;
 };
@@ -50,17 +50,14 @@ export const parseWorkSchedule = (value?: string | null): WorkScheduleConfig => 
                     ? parsed.cycle
                     : null,
             overrides:
-                parsed?.overrides && typeof parsed.overrides === 'object'
-                    ? parsed.overrides
-                    : {},
+                parsed?.overrides && typeof parsed.overrides === 'object' ? parsed.overrides : {},
         };
     } catch {
         return EMPTY_WORK_SCHEDULE;
     }
 };
 
-export const serializeWorkSchedule = (config: WorkScheduleConfig): string =>
-    JSON.stringify(config);
+export const serializeWorkSchedule = (config: WorkScheduleConfig): string => JSON.stringify(config);
 
 const normalizeTime = (hours: string, minutes: string): string => {
     const h = Number(hours);
@@ -127,10 +124,10 @@ export const parseMonthShiftList = (
 export const parseCycleShiftList = (
     raw: string,
 ): {
-    days: Array<WorkShift | null>;
+    days: (WorkShift | null)[];
     warnings: string[];
 } => {
-    const days: Array<WorkShift | null> = [];
+    const days: (WorkShift | null)[] = [];
     const warnings: string[] = [];
 
     raw.replace(/\r/g, '')
