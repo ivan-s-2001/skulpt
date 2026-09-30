@@ -1,4 +1,4 @@
-const isLocalBuild = process.env.APP_LOCAL_BUILD === 'true';
+const isLocalBuild = true;
 
 module.exports = {
     name: process.env.APP_NAME || 'Skulpt',
@@ -252,6 +252,7 @@ module.exports = {
         [
             '@sentry/react-native/expo',
             {
+                disableAutoUpload: isLocalBuild,
                 project: process.env.APP_SENTRY_PROJECT || '',
                 organization: process.env.APP_SENTRY_ORGANIZATION || '',
             },
@@ -264,7 +265,7 @@ module.exports = {
         appVariant: process.env.APP_VARIANT || process.env.EAS_BUILD_PROFILE || 'development',
         buildProfile: process.env.EAS_BUILD_PROFILE || process.env.APP_VARIANT || 'development',
         eas: {
-            projectId: process.env.APP_EAS_PROJECT_ID,
+            projectId: undefined,
         },
     },
     updates: isLocalBuild

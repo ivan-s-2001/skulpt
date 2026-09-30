@@ -37,6 +37,7 @@ import 'dayjs/locale/zh';
 import 'dayjs/locale/es';
 import 'dayjs/locale/hi';
 import { AudioProvider } from '@/hooks/use-audio';
+import { LOCAL_ONLY } from '@/constants/local-only';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -50,13 +51,14 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
     enableTimeToInitialDisplay: !isRunningInExpoGo(),
 });
 
-Sentry.init({
-    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-    debug: false,
-    tracesSampleRate: 0,
-    integrations: [navigationIntegration],
-    enableNativeFramesTracking: !isRunningInExpoGo(),
-});
+if (!LOCAL_ONLY)
+    Sentry.init({
+        dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+        debug: false,
+        tracesSampleRate: 0,
+        integrations: [navigationIntegration],
+        enableNativeFramesTracking: !isRunningInExpoGo(),
+    });
 
 export const unstable_settings = {
     initialRouteName: '(tabs)',
@@ -210,4 +212,4 @@ const RootLayout: FC = () => {
     );
 };
 
-export default Sentry.wrap(RootLayout);
+export default LOCAL_ONLY ? RootLayout : Sentry.wrap(RootLayout);

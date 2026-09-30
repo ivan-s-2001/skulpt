@@ -21,6 +21,7 @@ import {
 } from '@/analytics';
 import { reportError, runInBackground } from '@/services/error-reporting';
 import { isSyncEnabled } from '@/sync/config';
+import { LOCAL_ONLY } from '@/constants/local-only';
 import { useUser } from './use-user';
 
 type AnalyticsContextType = {
@@ -38,6 +39,7 @@ const analyticsContext = createContext<AnalyticsContextType>({
  */
 const AnalyticsProvider: FC<PropsWithChildren> = ({ children }) => {
     const [analytics] = useState<AnalyticsManager | null>(() => {
+        if (LOCAL_ONLY) return null;
         const environment = String(Constants.expoConfig?.extra?.appVariant ?? 'development');
         const explicitlyEnabled = process.env.EXPO_PUBLIC_ANALYTICS_ENABLED === 'true';
         const enabled = environment === 'production' || explicitlyEnabled;

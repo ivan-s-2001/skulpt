@@ -3,6 +3,7 @@ import { create as createAxios, isAxiosError } from 'axios';
 import { nanoid } from '@/helpers/nanoid';
 import { reportError } from '@/services/error-reporting';
 import { storage } from '@/storage';
+import { LOCAL_ONLY } from '@/constants/local-only';
 
 const STORAGE_KEYS = {
     /** Permanent device identifier — generated once, persists until app uninstall. */
@@ -123,7 +124,7 @@ export const getStoredAuthUserId = (): string | null => {
  * Returns true if the token was obtained and stored.
  */
 export const bootstrapAuth = async (userId: string): Promise<boolean> => {
-    if (!process.env.EXPO_PUBLIC_SYNC_HOST) return false;
+    if (LOCAL_ONLY || !process.env.EXPO_PUBLIC_SYNC_HOST) return false;
 
     try {
         const deviceId = getDeviceId();
@@ -157,6 +158,7 @@ export const bootstrapAuth = async (userId: string): Promise<boolean> => {
  * Returns the token string on success, or null if the server is unreachable.
  */
 export const ensureValidToken = async (userId: string): Promise<string | null> => {
+    if (LOCAL_ONLY) return null;
     if (isTokenValid()) return getStoredToken();
     const ok = await bootstrapAuth(userId);
     return ok ? getStoredToken() : null;
@@ -168,6 +170,7 @@ export const ensureValidToken = async (userId: string): Promise<string | null> =
  * sync cycle — exits immediately when the token is still valid.
  */
 export const refreshTokenIfNeeded = async (): Promise<void> => {
+    if (LOCAL_ONLY) return;
     if (isTokenValid()) return;
     const userId = getStoredAuthUserId();
     if (!userId) return;

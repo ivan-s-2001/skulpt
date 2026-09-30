@@ -2,6 +2,9 @@
 const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockReportError = jest.fn();
+const mockLocalOnly = { LOCAL_ONLY: false };
+
+jest.mock('@/constants/local-only', () => mockLocalOnly);
 
 jest.mock('axios', () => ({
     create: jest.fn(() => ({
@@ -186,5 +189,29 @@ describe('sync API error reporting', () => {
                 scope: 'sync-api',
             },
         });
+    });
+});
+
+describe('local-only sync boundary', () => {
+    test('blocks pull and push even with a configured provider', async () => {
+        mockLocalOnly.LOCAL_ONLY = true;
+        mockGet.mockClear();
+        mockPost.mockClear();
+        process.env.EXPO_PUBLIC_SYNC_HOST = 'https://api.example.test';
+        try {
+            const api = loadApiModule();
+            await expect(api.getServerChanges(0, 'local-user')).resolves.toEqual({
+                success: false,
+                error: 'LOCAL_ONLY',
+            });
+            await expect(api.sendChangesToServer({})).resolves.toEqual({
+                success: false,
+                error: 'LOCAL_ONLY',
+            });
+            expect(mockGet).not.toHaveBeenCalled();
+            expect(mockPost).not.toHaveBeenCalled();
+        } finally {
+            mockLocalOnly.LOCAL_ONLY = false;
+        }
     });
 });

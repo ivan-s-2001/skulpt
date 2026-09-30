@@ -28,6 +28,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { reportError, runInBackground } from '@/services/error-reporting';
 import { getNotificationNavigation } from '@/helpers/notification-navigation';
 import { useAnalytics } from './use-analytics';
+import { LOCAL_ONLY } from '@/constants/local-only';
 
 interface HandleNotificationStatus {
     status: PermissionStatus;
@@ -235,7 +236,7 @@ const useNotificationsProvider = () => {
             ]);
         }
 
-        if (Device.isDevice) {
+        if (Device.isDevice && !LOCAL_ONLY) {
             const projectId =
                 Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
 

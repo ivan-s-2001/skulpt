@@ -1,68 +1,19 @@
-# Build a local-only client
+# Local-only Skulpt
 
-Skulpt's workout core uses SQLite on the device. SyncLayer is enabled only when `EXPO_PUBLIC_SYNC_HOST` contains a provider URL.
+This branch stores and processes application data on the device. No backend deployment, account, server URL, or service credentials are required.
 
-## Configure the environment
+- SQLite (`skulpt.db`) stores workouts, exercises, sets, measurements, trainers, subscriptions, and work schedules.
+- Planning, conflict checks, attendance, and subscription progress run locally.
+- Server sync and token acquisition are disabled, even if a sync URL is present in the environment.
+- Analytics and remote error reporting are disabled.
+- Notification channels and timers remain local; Expo/FCM push tokens are not requested.
+- Expo hosted updates and Sentry build uploads are disabled.
+- Optional exercise animations and other media may load from the Internet. Core application data and calculations do not depend on them. Existing exercise records are retained; custom exercises can be created locally. This repository does not include the upstream server exercise catalogue.
 
-Copy the example:
+Install the standalone APK. No server setup is needed. Data survives application restarts and upgrades; uninstalling the app removes its local data.
 
-```bash
-cp .env.local.example .env.local
-```
+## Verify
 
-Leave the sync host empty or remove it:
+Run lint, TypeScript, and Jest. Boundary tests check that configured server addresses cannot trigger token, push, or pull requests.
 
-```dotenv
-EXPO_PUBLIC_SYNC_HOST=
-```
-
-Also leave these optional service variables empty if the build should not initialise analytics or error reporting:
-
-```dotenv
-EXPO_PUBLIC_POSTHOG_API_KEY=
-EXPO_PUBLIC_SENTRY_DSN=
-```
-
-`EXPO_PUBLIC_SYNC_HOST` controls SyncLayer only. Expo Updates uses `APP_EAS_PROJECT_ID`, and exercise media can use remote URLs. A build that must make no network requests at all must leave every hosted integration unconfigured and review those remaining paths separately.
-
-## Install and run
-
-```bash
-bun install --frozen-lockfile
-bun run verify
-bun run ios
-# or
-bun run android
-```
-
-The iOS project includes an Apple Watch target, so use your own Apple Developer team in `APP_APPLE_TEAM_ID`. Expo Go is not supported because the project contains custom native modules.
-
-## Behaviour without SyncLayer
-
-With an empty `EXPO_PUBLIC_SYNC_HOST`, the regular application flow behaves as follows:
-
-- The app does not request a provider token.
-- The app does not mount the active sync provider.
-- CRUD operations do not add new entries to `sync_queue`.
-- The app does not push or pull user data.
-- The app does not pull the `skulpt` exercise catalogue.
-- Workouts, custom exercises, sets, measurements, and settings remain in SQLite.
-
-Local records do not depend on enabling a provider later. If a later build enables SyncLayer, the existing backfill logic can queue eligible records before sync.
-
-## Exercise catalogue
-
-The maintained Skulpt catalogue is currently delivered through the provider's separate `skulpt` scope. It is not bundled with this repository. A new local-only installation therefore starts without the system catalogue.
-
-Users can create custom exercises and complete workouts locally. Personal data does not need sync, but a provider-free build has a more limited first-run experience because the catalogue is missing.
-
-## Verify the boundary
-
-Before distributing a local-only build:
-
-1. install it with an empty database;
-2. create a custom exercise;
-3. plan and complete a workout in airplane mode;
-4. relaunch the application and confirm the history remains;
-5. inspect network traffic if the release promises to be network-silent;
-6. confirm that store and privacy declarations match the exact build configuration.
+After Android prebuild, confirm Expo updates are disabled and `shouldSentryAutoUploadGeneral` is false. Before release, verify a fresh install in airplane mode: create an exercise, add trainers and a work schedule, plan and complete a workout, then relaunch and check persistence.
