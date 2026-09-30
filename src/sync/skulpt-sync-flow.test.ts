@@ -105,6 +105,18 @@ jest.mock('@/db/schema', () => ({
         __name: 'user',
         id: 'user.id',
     },
+    trainer: {
+        __name: 'trainer',
+        id: 'trainer.id',
+    },
+    subscription: {
+        __name: 'subscription',
+        id: 'subscription.id',
+    },
+    workSchedule: {
+        __name: 'work_schedule',
+        userId: 'work_schedule.user_id',
+    },
     workout: {
         __name: 'workout',
         id: 'workout.id',
@@ -572,6 +584,40 @@ describe('dataset sync flow', () => {
         expect(result).toBe(false);
         expect(mockCleanupSyncedOperations).not.toHaveBeenCalled();
         expect(Sentry.withScope).not.toHaveBeenCalled();
+    });
+
+    test('pushes work schedule with userId and no synthetic id', async () => {
+        const { pushLocalChanges } = loadSyncModule();
+
+        mockGetPendingSyncOperations.mockResolvedValue([
+            {
+                id: 'sync_ws_1',
+                tableName: 'work_schedule',
+                recordId: 'user_1',
+                operation: 'create',
+                timestamp: new Date(2000),
+                synced: 0,
+                data: {
+                    userId: 'user_1',
+                    configJson: '{"weekly":{}}',
+                    createdAt: new Date(1000),
+                    updatedAt: new Date(2000),
+                },
+            },
+        ]);
+        mockSendChangesToServer.mockResolvedValue({ success: true });
+
+        const result = await pushLocalChanges();
+
+        expect(result).toEqual({ success: true });
+        expect(mockSendChangesToServer).toHaveBeenCalledTimes(1);
+
+        const batch = mockSendChangesToServer.mock.calls[0][0];
+        const row = batch.work_schedule.created[0];
+
+        expect(row.userId).toBe('user_1');
+        expect(row.configJson).toBe('{"weekly":{}}');
+        expect(row.id).toBeUndefined();
     });
 
     test('treats retryable push HTTP failures as transient sync failures', async () => {

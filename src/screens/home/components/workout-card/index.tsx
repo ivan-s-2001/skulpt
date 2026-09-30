@@ -16,10 +16,11 @@ import { VStack } from '@/components/primitives/vstack';
 import { HStack } from '@/components/primitives/hstack';
 import { useDeleteWorkout, type WorkoutOverviewMeta } from '@/hooks/use-workouts';
 import { formatWorkoutDuration } from '@/helpers/times';
+import { TrainerBadge } from '@/components/subscription/trainer-badge';
 
 dayjs.extend(localizedFormat);
 
-const styles = StyleSheet.create((theme, rt) => ({
+const styles = StyleSheet.create((theme) => ({
     container: (status: WorkoutSelect['status']) => ({
         backgroundColor:
             status === 'in_progress' ? theme.colors.lime[400] : theme.colors.foreground,
@@ -95,6 +96,8 @@ interface WorkoutCardProps {
     onPress: (workoutId: string) => void;
     activeElapsedFormatted: string | null;
     overviewMeta?: WorkoutOverviewMeta;
+    trainerName?: string | null;
+    trainerColor?: string | null;
 }
 
 interface RightActionProps {
@@ -106,11 +109,9 @@ interface RightActionProps {
 const RightAction: FC<RightActionProps> = ({ drag, handleDelete }) => {
     const { theme } = useUnistyles();
 
-    const styleAnimation = useAnimatedStyle(() => {
-        return {
-            transform: [{ translateX: drag.value + 75 }],
-        };
-    });
+    const styleAnimation = useAnimatedStyle(() => ({
+        transform: [{ translateX: drag.value + 75 }],
+    }));
 
     return (
         <Reanimated.View style={[styles.rightAction, styleAnimation]}>
@@ -126,20 +127,25 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
     onPress,
     activeElapsedFormatted,
     overviewMeta,
+    trainerName,
+    trainerColor,
 }) => {
     const { t, i18n } = useTranslation(['common']);
     const { theme } = useUnistyles();
-
     const deleteWorkout = useDeleteWorkout();
+
     const sortedWorkoutTypes = overviewMeta?.sortedWorkoutTypes ?? [];
     const sortedPrimaryMuscleGroups = overviewMeta?.sortedPrimaryMuscleGroups ?? [];
+    const isMissed = workout.attendance === 'missed';
+    const isSubscription = Boolean(workout.subscriptionId && workout.trainerId);
 
     const handlePress = useCallback(() => {
+        if (isMissed) return;
         onPress(workout.id);
-    }, [onPress, workout.id]);
+    }, [isMissed, onPress, workout.id]);
 
     const formattedDate = useMemo(() => {
-        if (workout.status === 'planned' && workout.startAt) {
+        if ((workout.status === 'planned' || isMissed) && workout.startAt) {
             return dayjs(workout.startAt).locale(i18n.language).format('lll');
         }
 
@@ -149,7 +155,7 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
         }
 
         return null;
-    }, [workout.status, workout.startAt, workout.completedAt, i18n.language]);
+    }, [workout.status, workout.startAt, workout.completedAt, i18n.language, isMissed]);
 
     const formattedDuration =
         workout.status === 'completed' && isNumber(workout.duration)
@@ -157,8 +163,142 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
             : null;
 
     const handleDelete = useCallback(() => {
+        if (isSubscription) return;
         deleteWorkout.mutate(workout.id);
-    }, [workout, deleteWorkout]);
+    }, [deleteWorkout, isSubscription, workout.id]);
+
+    const markerColor = isMissed
+        ? theme.colors.red[500]
+        : trainerColor ||
+          (workout.status === 'in_progress' ? theme.colors.neutral[950] : theme.colors.lime[400]);
+
+    const card = (
+        <Box style={styles.container(workout.status)}>
+            <Pressable onPress={handlePress} disabled={isMissed}>
+                <HStack style={styles.card}>
+                    <VStack style={styles.content}>
+                        <HStack style={styles.workoutInfoContainer}>
+                            <Text
+                                style={[styles.status(workout.status), styles.workoutInfoTextSize]}
+                            >
+                                {isMissed && 'Пропущено'}
+                                {!isMissed &&
+                                    workout.status === 'in_progress' &&
+                                    t('now', { ns: 'common' })}
+                                {!isMissed &&
+                                    workout.status === 'planned' &&
+                                    (workout.startAt
+                                        ? formattedDate
+                                        : t(`workoutStatus.${workout.status}`, {
+                                              ns: 'common',
+                                          }))}
+                                {!isMissed && workout.status === 'completed' && formattedDate}
+                            </Text>
+
+                            {sortedWorkoutTypes.length > 0 && !isMissed && (
+                                <>
+                                    <Dot
+                                        color={
+                                            workout.status === 'in_progress'
+                                                ? theme.colors.neutral[950]
+                                                : theme.colors.typography
+                                        }
+                                        opacity={workout.status === 'in_progress' ? 1 : 0.8}
+                                        size={theme.space(4)}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.status(workout.status),
+                                            styles.workoutInfoTextSize,
+                                        ]}
+                                    >
+                                        {sortedWorkoutTypes
+                                            .map((type) =>
+                                                t(`exerciseCategory.${type}`, {
+                                                    ns: 'common',
+                                                }),
+                                            )
+                                            .join(', ')}
+                                    </Text>
+                                </>
+                            )}
+                        </HStack>
+
+                        <HStack>
+                            <Box style={styles.workoutColorContainer}>
+                                <Box
+                                    style={[
+                                        styles.workoutColor(workout.status),
+                                        { backgroundColor: markerColor },
+                                    ]}
+                                />
+                            </Box>
+                            <Text style={styles.title(workout.status)}>{workout.name}</Text>
+                        </HStack>
+
+                        {trainerName && trainerColor && (
+                            <TrainerBadge
+                                name={trainerName}
+                                color={trainerColor}
+                                onAccent={workout.status === 'in_progress'}
+                            />
+                        )}
+
+                        <HStack style={styles.workoutInfoContainer}>
+                            {workout.status === 'in_progress' && (
+                                <HStack style={styles.completedInfoContainer}>
+                                    <Text style={[styles.timer, styles.workoutInfoTextSize]}>
+                                        {activeElapsedFormatted ?? ''}
+                                    </Text>
+                                </HStack>
+                            )}
+
+                            {workout.status === 'completed' && (
+                                <HStack style={styles.completedInfoContainer}>
+                                    {formattedDuration && (
+                                        <Text style={styles.workoutInfoTextSize}>
+                                            {formattedDuration}
+                                        </Text>
+                                    )}
+                                </HStack>
+                            )}
+
+                            {sortedPrimaryMuscleGroups.length > 0 && !isMissed && (
+                                <>
+                                    {['in_progress', 'completed'].includes(workout.status) && (
+                                        <Dot
+                                            color={
+                                                workout.status === 'in_progress'
+                                                    ? theme.colors.neutral[950]
+                                                    : theme.colors.typography
+                                            }
+                                            size={theme.space(4)}
+                                        />
+                                    )}
+                                    <Text
+                                        style={[
+                                            styles.workoutInfoTextSize,
+                                            styles.workoutInfoTextColor(workout.status),
+                                        ]}
+                                    >
+                                        {sortedPrimaryMuscleGroups
+                                            .map((muscle) =>
+                                                t(`muscleGroup.${muscle}`, {
+                                                    ns: 'common',
+                                                }),
+                                            )
+                                            .join(', ')}
+                                    </Text>
+                                </>
+                            )}
+                        </HStack>
+                    </VStack>
+                </HStack>
+            </Pressable>
+        </Box>
+    );
+
+    if (isSubscription) return card;
 
     return (
         <Swipeable
@@ -171,106 +311,7 @@ const WorkoutCardComponent: FC<WorkoutCardProps> = ({
                 <RightAction prog={prog} drag={drag} handleDelete={handleDelete} />
             )}
         >
-            <Box style={styles.container(workout.status)}>
-                <Pressable onPress={handlePress}>
-                    <HStack style={styles.card}>
-                        <VStack style={styles.content}>
-                            <HStack style={styles.workoutInfoContainer}>
-                                <Text
-                                    style={[
-                                        styles.status(workout.status),
-                                        styles.workoutInfoTextSize,
-                                    ]}
-                                >
-                                    {workout.status === 'in_progress' && t(`now`, { ns: 'common' })}
-                                    {workout.status === 'planned' &&
-                                        (workout.startAt
-                                            ? formattedDate
-                                            : t(`workoutStatus.${workout.status}`, {
-                                                  ns: 'common',
-                                              }))}
-                                    {workout.status === 'completed' && formattedDate}
-                                </Text>
-                                {sortedWorkoutTypes.length > 0 && (
-                                    <>
-                                        <Dot
-                                            color={
-                                                workout.status === 'in_progress'
-                                                    ? theme.colors.neutral[950]
-                                                    : theme.colors.typography
-                                            }
-                                            opacity={workout.status === 'in_progress' ? 1 : 0.8}
-                                            size={theme.space(4)}
-                                        />
-                                        <Text
-                                            style={[
-                                                styles.status(workout.status),
-                                                styles.workoutInfoTextSize,
-                                            ]}
-                                        >
-                                            {sortedWorkoutTypes
-                                                .map((type) =>
-                                                    t(`exerciseCategory.${type}`, { ns: 'common' }),
-                                                )
-                                                .join(', ')}
-                                        </Text>
-                                    </>
-                                )}
-                            </HStack>
-                            <HStack>
-                                <Box style={styles.workoutColorContainer}>
-                                    <Box style={styles.workoutColor(workout.status)} />
-                                </Box>
-                                <Text style={styles.title(workout.status)}>{workout.name}</Text>
-                            </HStack>
-                            <HStack style={styles.workoutInfoContainer}>
-                                {workout.status === 'in_progress' && (
-                                    <HStack style={styles.completedInfoContainer}>
-                                        <Text style={[styles.timer, styles.workoutInfoTextSize]}>
-                                            {activeElapsedFormatted ?? ''}
-                                        </Text>
-                                    </HStack>
-                                )}
-                                {workout.status === 'completed' && (
-                                    <HStack style={styles.completedInfoContainer}>
-                                        {formattedDuration && (
-                                            <Text style={styles.workoutInfoTextSize}>
-                                                {formattedDuration}
-                                            </Text>
-                                        )}
-                                    </HStack>
-                                )}
-                                {sortedPrimaryMuscleGroups.length > 0 && (
-                                    <>
-                                        {['in_progress', 'completed'].includes(workout.status) && (
-                                            <Dot
-                                                color={
-                                                    workout.status === 'in_progress'
-                                                        ? theme.colors.neutral[950]
-                                                        : theme.colors.typography
-                                                }
-                                                size={theme.space(4)}
-                                            />
-                                        )}
-                                        <Text
-                                            style={[
-                                                styles.workoutInfoTextSize,
-                                                styles.workoutInfoTextColor(workout.status),
-                                            ]}
-                                        >
-                                            {sortedPrimaryMuscleGroups
-                                                .map((muscle) =>
-                                                    t(`muscleGroup.${muscle}`, { ns: 'common' }),
-                                                )
-                                                .join(', ')}
-                                        </Text>
-                                    </>
-                                )}
-                            </HStack>
-                        </VStack>
-                    </HStack>
-                </Pressable>
-            </Box>
+            {card}
         </Swipeable>
     );
 };
@@ -280,6 +321,8 @@ export const WorkoutCard = memo(WorkoutCardComponent, (prev, next) => {
         prev.workout === next.workout &&
         prev.onPress === next.onPress &&
         prev.activeElapsedFormatted === next.activeElapsedFormatted &&
-        prev.overviewMeta === next.overviewMeta
+        prev.overviewMeta === next.overviewMeta &&
+        prev.trainerName === next.trainerName &&
+        prev.trainerColor === next.trainerColor
     );
 });

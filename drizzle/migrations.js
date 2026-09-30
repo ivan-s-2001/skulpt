@@ -22,6 +22,7 @@ import m0017 from './0017_curved_morlocks.sql';
 import m0018 from './0018_legal_cerebro.sql';
 import m0019 from './0019_nebulous_shape.sql';
 import m0020 from './0020_blue_lady_ursula.sql';
+import m0021 from './0021_training_plan.sql';
 
 export default {
     journal,
@@ -47,5 +48,6 @@ export default {
         m0018,
         m0019,
         m0020,
+        m0021,
     },
 };

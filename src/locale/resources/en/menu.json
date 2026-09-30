@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "Home"
+        "title": "Schedule"
+    },
+    "subscription": {
+        "title": "Pass"
     },
     "results": {
-        "title": "Results"
+        "title": "Progress"
     },
     "exercises": {
         "title": "Exercises"

@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "Inicio"
+        "title": "Agenda"
+    },
+    "subscription": {
+        "title": "Bono"
     },
     "results": {
-        "title": "Resultados"
+        "title": "Progreso"
     },
     "exercises": {
         "title": "Ejercicios"

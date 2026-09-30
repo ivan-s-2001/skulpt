@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { router } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +12,8 @@ import { Text } from '@/components/primitives/text';
 import { Label } from '@/components/forms/label';
 import { useWorkoutStats } from '@/hooks/use-workouts';
 import { useUser } from '@/hooks/use-user';
+import { useActiveSubscription } from '@/hooks/use-planning';
+import { SubscriptionProgressCard } from '@/components/subscription/progress-card';
 
 import { ActivitySummary } from './components/activity-summary';
 import { MonthStats } from './components/month';
@@ -36,7 +39,7 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
     },
     statContainer: {
-        height: theme.space(8),
+        minHeight: theme.space(8),
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: theme.space(3),
@@ -67,7 +70,14 @@ const ResultsScreen = () => {
     const { t } = useTranslation(['common', 'screens']);
     const { user } = useUser();
     const stats = useWorkoutStats();
+    const { data: activeSubscription } = useActiveSubscription();
     const [isChartScrubbing, setIsChartScrubbing] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 60_000);
+        return () => clearInterval(timer);
+    }, []);
 
     const statsData = useMemo(() => {
         return [
@@ -126,6 +136,29 @@ const ResultsScreen = () => {
         ];
     }, [stats, user?.weightUnits, t]);
 
+    const subscriptionStats = useMemo(() => {
+        if (!activeSubscription) return null;
+
+        const attended = activeSubscription.workouts.filter(
+            (item) => item.attendance === 'attended' || item.status === 'completed',
+        ).length;
+        const missed = activeSubscription.workouts.filter(
+            (item) => item.attendance === 'missed',
+        ).length;
+        const remaining = Math.max(0, activeSubscription.subscription.targetSessions - attended);
+        const next = activeSubscription.workouts
+            .filter(
+                (item) =>
+                    item.attendance !== 'missed' &&
+                    (item.status === 'planned' || item.status === 'in_progress') &&
+                    item.startAt,
+            )
+            .sort((a, b) => new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime())
+            .find((item) => new Date(item.startAt!).getTime() >= now);
+
+        return { attended, missed, remaining, next };
+    }, [activeSubscription, now]);
+
     return (
         <ScrollView
             style={styles.container}
@@ -133,10 +166,27 @@ const ResultsScreen = () => {
             scrollEnabled={!isChartScrubbing}
         >
             <Title type="h1">{t('results.title', { ns: 'screens' })}</Title>
+
+            {activeSubscription && subscriptionStats && (
+                <VStack style={styles.fieldContainer}>
+                    <Label style={styles.label}>Абонемент</Label>
+                    <SubscriptionProgressCard
+                        trainerName={activeSubscription.trainer?.name || 'Тренер'}
+                        trainerColor={activeSubscription.trainer?.color}
+                        attended={subscriptionStats.attended}
+                        target={activeSubscription.subscription.targetSessions}
+                        missed={subscriptionStats.missed}
+                        nextAt={subscriptionStats.next?.startAt}
+                        onPress={() => router.navigate('/subscription')}
+                    />
+                </VStack>
+            )}
+
             <MonthStats />
             <ActivitySummary onScrubbingChange={setIsChartScrubbing} />
             <StrengthStats />
             <Scale />
+
             <VStack style={styles.fieldContainer}>
                 <Label style={styles.label}>{t('results.stats.title', { ns: 'screens' })}</Label>
                 <VStack style={styles.statsContainer}>

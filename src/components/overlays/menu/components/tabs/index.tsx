@@ -4,7 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { RelativePathString, router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { LucideIcon, House, Settings2, CircleGauge, ChartNoAxesColumn } from 'lucide-react-native';
+import {
+    LucideIcon,
+    CalendarDays,
+    BadgeCheck,
+    Settings2,
+    CircleGauge,
+    ChartNoAxesColumn,
+} from 'lucide-react-native';
 
 import { Pressable } from '@/components/primitives/pressable';
 import { VStack } from '@/components/primitives/vstack';
@@ -79,6 +86,7 @@ const Item: FC<ItemType> = ({ isFocused, onPress, children, Icon }) => {
                             fontSize="xs"
                             fontWeight={isFocused ? 'semibold' : 'medium'}
                             style={styles.itemText(isFocused)}
+                            numberOfLines={1}
                         >
                             {t(children, { ns: 'menu' })}
                         </Text>
@@ -90,12 +98,17 @@ const Item: FC<ItemType> = ({ isFocused, onPress, children, Icon }) => {
 };
 
 const Tabs: FC<TabsType> = ({ state }) => {
-    const menu = useMemo(() => {
-        const items = [
+    const menu = useMemo(
+        () => [
             {
                 screen: 'index',
                 title: 'home.title',
-                icon: House,
+                icon: CalendarDays,
+            },
+            {
+                screen: 'subscription',
+                title: 'subscription.title',
+                icon: BadgeCheck,
             },
             {
                 screen: 'results',
@@ -112,29 +125,23 @@ const Tabs: FC<TabsType> = ({ state }) => {
                 title: 'settings.title',
                 icon: Settings2,
             },
-        ];
-
-        return items;
-    }, []);
+        ],
+        [],
+    );
 
     const isFocused = useCallback(
-        (name: string) => {
-            if (name === 'menu') {
-                return !menu.map((i) => i.screen).includes(state.routes[state.index].name);
-            }
-            return name === state.routes[state.index].name;
-        },
-        [state, menu],
+        (name: string) => name === state.routes[state.index].name,
+        [state],
     );
 
     return (
         <HStack style={styles.tabsContainer}>
-            {menu.map((item, index) => (
+            {menu.map((item) => (
                 <Item
-                    key={index}
+                    key={item.screen}
                     onPress={() => {
                         if (item.screen === 'index') {
-                            router.navigate(`/`);
+                            router.navigate('/');
                         } else {
                             router.navigate(`/${item.screen}` as RelativePathString);
                         }

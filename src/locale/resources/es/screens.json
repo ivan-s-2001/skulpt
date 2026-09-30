@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "Inicio",
+        "title": "Agenda",
         "planned": "Entrenamientos programados",
         "workoutsCount_one": "{{count}} entrenamiento",
         "workoutsCount_other": "{{count}} entrenamientos",
@@ -458,5 +458,21 @@
             "zone4": "Zona 4 — Pico",
             "zone5": "Zona 5 — Máximo"
         }
+    },
+    "plan": {
+        "title": "Plan",
+        "subscription": {
+            "section": "Bono",
+            "title": "Entrenamientos con entrenador",
+            "emptyDescription": "Cuando hay un bono activo, todas sus sesiones futuras quedan planificadas.",
+            "action": "Planificar bono"
+        },
+        "solo": {
+            "section": "Entrenamientos extra",
+            "add": "Añadir",
+            "emptyTitle": "No hay entrenamientos extra",
+            "emptyDescription": "Añádelos además del bono; no reducen las sesiones restantes."
+        },
+        "note": "Los entrenamientos individuales complementan el bono. Solo las sesiones asistidas con el entrenador cuentan para el progreso."
     }
 }

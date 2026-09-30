@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "首页"
+        "title": "日程"
+    },
+    "subscription": {
+        "title": "课包"
     },
     "results": {
-        "title": "成果"
+        "title": "进展"
     },
     "exercises": {
         "title": "训练"

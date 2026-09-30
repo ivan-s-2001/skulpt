@@ -2,6 +2,9 @@ import { describe, expect, jest, test, beforeEach } from '@jest/globals';
 
 const mockPost = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 const mockReportError = jest.fn();
+const mockLocalOnly = { LOCAL_ONLY: false };
+
+jest.mock('@/constants/local-only', () => mockLocalOnly);
 const mockNanoid = jest.fn<() => string>();
 const storageValues = new Map<string, string | number>();
 const mockStorage = {
@@ -99,5 +102,22 @@ describe('auth storage fallback', () => {
         expect(getStoredAuthUserId()).toBe('user-1');
         expect(isTokenValid()).toBe(true);
         expect(mockReportError).not.toHaveBeenCalled();
+    });
+});
+
+describe('local-only auth boundary', () => {
+    test('never obtains or refreshes a server token', async () => {
+        mockLocalOnly.LOCAL_ONLY = true;
+        mockPost.mockClear();
+        process.env.EXPO_PUBLIC_SYNC_HOST = 'https://api.example.test';
+        try {
+            const auth = loadAuthModule();
+            await expect(auth.bootstrapAuth('local-user')).resolves.toBe(false);
+            await expect(auth.ensureValidToken('local-user')).resolves.toBeNull();
+            await auth.refreshTokenIfNeeded();
+            expect(mockPost).not.toHaveBeenCalled();
+        } finally {
+            mockLocalOnly.LOCAL_ONLY = false;
+        }
     });
 });

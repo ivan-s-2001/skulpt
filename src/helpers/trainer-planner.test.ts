@@ -1,0 +1,158 @@
+// @ts-nocheck
+import dayjs from 'dayjs';
+
+import { buildTrainerPlan } from './trainer-planner';
+
+const trainer = {
+    id: 't1',
+    name: 'Наташа',
+    color: '#a3e635',
+    scheduleJson: '[]',
+    schedule: Array.from({ length: 7 }, (_, day) => ({
+        day,
+        start: '17:00',
+        end: '21:00',
+    })),
+};
+
+const openEveryDay = {
+    weekly: Object.fromEntries(Array.from({ length: 7 }, (_, day) => [String(day), null])),
+    cycle: null,
+    overrides: {},
+};
+
+const onlyDates = (dates: string[]) => ({
+    weekly: {},
+    cycle: null,
+    overrides: Object.fromEntries(dates.map((date) => [date, null])),
+});
+
+describe('trainer planner', () => {
+    test('never creates a trainer workout in the past today', () => {
+        const from = new Date('2026-09-29T18:07:00');
+        const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
+
+        expect(plan.complete).toBe(true);
+        expect(plan.sessions[0].startAt.getTime()).toBeGreaterThanOrEqual(
+            new Date('2026-09-29T18:15:00').getTime(),
+        );
+    });
+
+    test('skips today when not enough trainer time remains', () => {
+        const from = new Date('2026-09-29T20:20:00');
+        const plan = buildTrainerPlan(trainer, 1, openEveryDay, [], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe('2026-09-29');
+    });
+
+    test('builds a full future course with rest days', () => {
+        const from = new Date('2026-09-29T12:00:00');
+        const plan = buildTrainerPlan(trainer, 10, openEveryDay, [], from);
+
+        expect(plan.complete).toBe(true);
+        expect(plan.sessions).toHaveLength(10);
+
+        for (let i = 1; i < plan.sessions.length; i++) {
+            const gap = dayjs(plan.sessions[i].startAt)
+                .startOf('day')
+                .diff(dayjs(plan.sessions[i - 1].startAt).startOf('day'), 'day');
+
+            expect(gap).toBeGreaterThanOrEqual(2);
+        }
+    });
+
+    test('does not put trainer sessions on existing workout dates', () => {
+        const from = new Date('2026-09-29T12:00:00');
+        const workout = {
+            status: 'planned',
+            startAt: new Date('2026-09-29T10:00:00'),
+            createdAt: new Date(),
+        };
+
+        const plan = buildTrainerPlan(trainer, 2, openEveryDay, [workout], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).not.toBe('2026-09-29');
+    });
+
+    test('chooses the best whole course instead of the first feasible dates', () => {
+        const from = new Date('2026-09-29T12:00:00');
+        const schedule = onlyDates(['2026-09-29', '2026-10-09', '2026-10-11']);
+
+        const plan = buildTrainerPlan(trainer, 2, schedule, [], from);
+        const dates = plan.sessions.map((session) => dayjs(session.startAt).format('YYYY-MM-DD'));
+
+        expect(dates).toEqual(['2026-10-09', '2026-10-11']);
+    });
+
+    test('keeps rest around already planned sessions with the same trainer', () => {
+        const from = new Date('2026-10-05T12:00:00');
+        const existing = {
+            id: 'existing',
+            status: 'planned',
+            trainerId: 't1',
+            startAt: new Date('2026-10-10T17:00:00'),
+            createdAt: new Date(),
+        };
+
+        const schedule = onlyDates(['2026-10-11', '2026-10-12', '2026-10-13']);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, [existing], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
+    });
+
+    test('keeps rest after a trainer workout from yesterday when replanning', () => {
+        const from = new Date('2026-10-12T08:00:00');
+        const existing = {
+            id: 'existing',
+            status: 'completed',
+            trainerId: 't1',
+            attendance: 'attended',
+            completedAt: new Date('2026-10-11T18:00:00'),
+            startedAt: new Date('2026-10-11T17:00:00'),
+            createdAt: new Date(),
+        };
+
+        const schedule = onlyDates(['2026-10-12', '2026-10-13']);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, [existing], from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-13');
+    });
+
+    test('counts earlier workouts in the current week toward trainer weekly limit', () => {
+        const from = new Date('2026-10-10T08:00:00');
+        const existing = ['2026-10-05', '2026-10-07', '2026-10-09'].map((date, index) => ({
+            id: `existing-${index}`,
+            status: 'completed',
+            trainerId: 't1',
+            attendance: 'attended',
+            completedAt: new Date(`${date}T18:00:00`),
+            startedAt: new Date(`${date}T17:00:00`),
+            createdAt: new Date(),
+        }));
+
+        const schedule = onlyDates(['2026-10-11', '2026-10-12']);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, existing, from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
+    });
+
+    test('counts existing future trainer workouts toward the weekly limit', () => {
+        const from = new Date('2026-10-05T12:00:00');
+        const existing = ['2026-10-05', '2026-10-07', '2026-10-09'].map((date, index) => ({
+            id: `existing-${index}`,
+            status: 'planned',
+            trainerId: 't1',
+            startAt: new Date(`${date}T17:00:00`),
+            createdAt: new Date(),
+        }));
+
+        const schedule = onlyDates(['2026-10-11', '2026-10-12']);
+
+        const plan = buildTrainerPlan(trainer, 1, schedule, existing, from);
+
+        expect(dayjs(plan.sessions[0].startAt).format('YYYY-MM-DD')).toBe('2026-10-12');
+    });
+});

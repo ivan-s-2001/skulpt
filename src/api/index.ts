@@ -1,5 +1,6 @@
 import { create as createAxios, isAxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { reportError } from '@/services/error-reporting';
+import { LOCAL_ONLY } from '@/constants/local-only';
 import {
     bootstrapAuth,
     clearToken,
@@ -68,7 +69,7 @@ const NETWORK_ERROR_CODES = new Set(['ERR_NETWORK', 'ERR_CANCELED']);
 //  - DATABASE               → already captured by captureSyncFailure in the sync engine;
 //                             reporting here would be a duplicate
 const SUPPRESS_SENTRY_ERRORS = new Set(['NO_INTERNET', 'TIMEOUT', 'DATABASE']);
-const SYNC_SCHEMA_VERSION = '2';
+const SYNC_SCHEMA_VERSION = '3';
 
 const createSyncClient = () => {
     return createAxios({
@@ -265,6 +266,7 @@ export const getServerChanges = async (
     userId: string,
     options: GetServerChangesOptions = {},
 ): Promise<ApiResponse<ServerSyncResponse>> => {
+    if (LOCAL_ONLY) return { success: false, error: 'LOCAL_ONLY' };
     try {
         const response = await syncClient.get('/sync', {
             params: {
@@ -302,6 +304,7 @@ export const getSkulptChanges = async (
 export const sendChangesToServer = async (
     changes: SyncBatchRequest,
 ): Promise<SendChangesApiResponse> => {
+    if (LOCAL_ONLY) return { success: false, error: 'LOCAL_ONLY' };
     try {
         const response = await syncClient.post('/sync', changes);
         return { ...response.data };

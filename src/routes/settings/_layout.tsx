@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { Stack } from '@/navigators/stack';
 import { useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +27,7 @@ export default function SettingsLayout() {
                 ),
             }}
         >
+            <Stack.Screen name="schedule" options={{ headerTitle: 'Мой график' }} />
             <Stack.Screen
                 name="autolock"
                 options={{

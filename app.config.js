@@ -1,3 +1,5 @@
+const isLocalBuild = true;
+
 module.exports = {
     name: process.env.APP_NAME || 'Skulpt',
     version: process.env.APP_VERSION || '1.0',
@@ -250,6 +252,7 @@ module.exports = {
         [
             '@sentry/react-native/expo',
             {
+                disableAutoUpload: isLocalBuild,
                 project: process.env.APP_SENTRY_PROJECT || '',
                 organization: process.env.APP_SENTRY_ORGANIZATION || '',
             },
@@ -262,11 +265,15 @@ module.exports = {
         appVariant: process.env.APP_VARIANT || process.env.EAS_BUILD_PROFILE || 'development',
         buildProfile: process.env.EAS_BUILD_PROFILE || process.env.APP_VARIANT || 'development',
         eas: {
-            projectId: process.env.APP_EAS_PROJECT_ID,
+            projectId: undefined,
         },
     },
-    updates: {
-        url: `https://u.expo.dev/${process.env.APP_EAS_PROJECT_ID}`,
-        enableBsdiffPatchSupport: false,
-    },
+    updates: isLocalBuild
+        ? {
+              enabled: false,
+          }
+        : {
+              url: `https://u.expo.dev/${process.env.APP_EAS_PROJECT_ID}`,
+              enableBsdiffPatchSupport: false,
+          },
 };

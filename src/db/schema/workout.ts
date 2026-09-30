@@ -27,6 +27,11 @@ export const workout = sqliteTable(
         remind: text('remind', {
             enum: ['start', '5m', '10m', '15m', '30m', '1h', '2h'],
         }),
+        trainerId: text('trainer_id', { length: 21 }),
+        subscriptionId: text('subscription_id', { length: 21 }),
+        attendance: text('attendance', {
+            enum: ['attended', 'missed'],
+        }),
         userId: text('user_id', { length: 21 }).notNull(),
         createdAt: integer('created_at', { mode: 'timestamp_ms' })
             .notNull()
@@ -40,6 +45,8 @@ export const workout = sqliteTable(
         index('workout_user_status_idx').on(table.userId, table.status),
         index('workout_user_created_at_idx').on(table.userId, table.createdAt),
         index('workout_status_idx').on(table.status),
+        index('workout_trainer_idx').on(table.trainerId),
+        index('workout_subscription_idx').on(table.subscriptionId),
     ],
 );
 

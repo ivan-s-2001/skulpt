@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react-native';
+import { LOCAL_ONLY } from '@/constants/local-only';
 
 type ErrorMetadata = {
     extras?: Record<string, unknown>;
@@ -22,7 +23,7 @@ export const reportError = (
     context: string,
     metadata: ErrorMetadata = {},
 ): void => {
-    if (__DEV__) {
+    if (__DEV__ || LOCAL_ONLY) {
         if (metadata.extras) {
             console.error(context, {
                 error,

@@ -24,6 +24,21 @@ const mockTables = {
         id: 'measurement.id',
         updatedAt: 'measurement.updated_at',
     },
+    trainer: {
+        __name: 'trainer',
+        id: 'trainer.id',
+        updatedAt: 'trainer.updated_at',
+    },
+    subscription: {
+        __name: 'subscription',
+        id: 'subscription.id',
+        updatedAt: 'subscription.updated_at',
+    },
+    workSchedule: {
+        __name: 'work_schedule',
+        userId: 'work_schedule.user_id',
+        updatedAt: 'work_schedule.updated_at',
+    },
     syncQueue: {
         __name: 'sync_queue',
         tableName: 'sync_queue.table_name',
@@ -62,8 +77,16 @@ const mockAppReviewPromptRow = {
     updatedAt: new Date(1500),
 };
 
+const mockWorkScheduleRow = {
+    userId: 'user_1',
+    configJson: '{"weekly":{}}',
+    createdAt: new Date(500),
+    updatedAt: new Date(1600),
+};
+
 const rowsForTable = (tableName: string) => {
     if (tableName === 'app_review_prompt') return [mockAppReviewPromptRow];
+    if (tableName === 'work_schedule') return [mockWorkScheduleRow];
     return [];
 };
 
@@ -119,6 +142,15 @@ describe('sync backfill', () => {
                 recordId: 'prompt_1',
                 operation: 'update',
                 data: mockAppReviewPromptRow,
+            }),
+        ]);
+
+        expect(mockQueueSyncOperations).toHaveBeenCalledWith([
+            expect.objectContaining({
+                tableName: 'work_schedule',
+                recordId: 'user_1',
+                operation: 'update',
+                data: mockWorkScheduleRow,
             }),
         ]);
     });

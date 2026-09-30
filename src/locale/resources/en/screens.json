@@ -1,6 +1,6 @@
 {
     "home": {
-        "title": "Home",
+        "title": "Schedule",
         "planned": "Planned",
         "workoutsCount_one": "{{count}} workout",
         "workoutsCount_other": "{{count}} workouts",
@@ -458,5 +458,21 @@
             "zone4": "Zone 4 — Peak",
             "zone5": "Zone 5 — Max"
         }
+    },
+    "plan": {
+        "title": "Plan",
+        "subscription": {
+            "section": "Membership",
+            "title": "Train with a coach",
+            "emptyDescription": "When a membership is active, all of its future sessions are always planned.",
+            "action": "Plan membership"
+        },
+        "solo": {
+            "section": "Extra solo workouts",
+            "add": "Add",
+            "emptyTitle": "No solo workouts planned",
+            "emptyDescription": "Add them on top of the membership — they do not reduce its remaining sessions."
+        },
+        "note": "Solo workouts supplement the membership. Only attended sessions with the selected coach count toward membership progress."
     }
 }

@@ -8,6 +8,8 @@ export interface WorkoutGroup {
     workouts: WorkoutSelect[];
 }
 
+export { getWorkoutDateKey } from './workout-date';
+
 export const groupWorkoutsByWeek = (
     workouts: WorkoutSelect[],
     locale: string = 'ru',

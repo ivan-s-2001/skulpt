@@ -1,9 +1,12 @@
 {
     "home": {
-        "title": "Главная"
+        "title": "График"
+    },
+    "subscription": {
+        "title": "Абонемент"
     },
     "results": {
-        "title": "Результаты"
+        "title": "Прогресс"
     },
     "exercises": {
         "title": "Упражнения"

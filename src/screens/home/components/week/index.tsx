@@ -1,8 +1,8 @@
-import { FC, useCallback, useMemo } from 'react';
+import { FC, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native-unistyles';
-import { useRouter } from 'expo-router';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { WorkoutSelect } from '@/db/schema';
 import { Box } from '@/components/primitives/box';
@@ -10,10 +10,14 @@ import { HStack } from '@/components/primitives/hstack';
 import { Text } from '@/components/primitives/text';
 import { VStack } from '@/components/primitives/vstack';
 import { Pressable } from '@/components/primitives/pressable';
+import { getWorkoutDateKey } from '@/helpers/workouts';
 
 interface WeekStatsProps {
     workouts: WorkoutSelect[];
     firstWeekday: number;
+    selectedDate: string;
+    onSelectDate: (dateKey: string) => void;
+    trainerColorById?: Record<string, string>;
 }
 
 const getWeekStart = (date: dayjs.Dayjs, firstWeekday: number): dayjs.Dayjs => {
@@ -28,6 +32,45 @@ const styles = StyleSheet.create((theme) => ({
     },
     container: {
         gap: theme.space(2),
+    },
+    navRow: {
+        minHeight: theme.space(10),
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: theme.space(2),
+    },
+    navTitle: {
+        flex: 1,
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.sm.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
+        textTransform: 'capitalize',
+    },
+    navActions: {
+        alignItems: 'center',
+        gap: theme.space(1),
+    },
+    navButton: {
+        minWidth: theme.space(9),
+        minHeight: theme.space(9),
+        paddingHorizontal: theme.space(2),
+        borderRadius: theme.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.foreground,
+    },
+    todayButton: {
+        minHeight: theme.space(9),
+        paddingHorizontal: theme.space(3),
+        borderRadius: theme.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.foreground,
+    },
+    todayText: {
+        color: theme.colors.typography,
+        fontSize: theme.fontSize.xs.fontSize,
+        fontWeight: theme.fontWeight.semibold.fontWeight,
     },
     weekdaysRow: {
         justifyContent: 'space-between',
@@ -65,9 +108,16 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: theme.space(0.25),
         borderColor: theme.colors.border,
     },
+    dayCirclePlanned: {
+        backgroundColor: theme.colors.foreground,
+    },
     dayCircleCompleted: {
         backgroundColor: theme.colors.lime[400],
         borderColor: theme.colors.lime[400],
+    },
+    dayCircleSelected: {
+        borderWidth: theme.space(0.5),
+        borderColor: theme.colors.typography,
     },
     dayCircleToday: {
         borderColor: theme.colors.typography,
@@ -82,62 +132,155 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.neutral[950],
         opacity: 1,
     },
-    dayTextToday: {
+    dayTextSelected: {
         opacity: 1,
     },
+    indicators: {
+        position: 'absolute',
+        bottom: theme.space(1),
+        flexDirection: 'row',
+        gap: theme.space(0.75),
+    },
+    indicator: (color: string) => ({
+        width: theme.space(1),
+        height: theme.space(1),
+        borderRadius: theme.radius.full,
+        backgroundColor: color,
+    }),
 }));
 
-export const WeekStats: FC<WeekStatsProps> = ({ workouts, firstWeekday }) => {
+export const WeekStats: FC<WeekStatsProps> = ({
+    workouts,
+    firstWeekday,
+    selectedDate,
+    onSelectDate,
+    trainerColorById = {},
+}) => {
     const { i18n } = useTranslation(['screens']);
-    const router = useRouter();
+    const { theme } = useUnistyles();
 
-    const workoutDayKeys = useMemo(() => {
-        const keys = new Set<string>();
+    const workoutStateByDate = useMemo(() => {
+        const map = new Map<
+            string,
+            {
+                planned: boolean;
+                inProgress: boolean;
+                completed: boolean;
+                missed: boolean;
+                hasSolo: boolean;
+                trainerColors: Set<string>;
+            }
+        >();
+
         workouts.forEach((workout) => {
-            if (workout.status !== 'completed') return;
-            const workoutDate = workout.completedAt ?? workout.startedAt ?? workout.createdAt;
-            if (!workoutDate) return;
-            const date = dayjs(workoutDate);
-            if (!date.isValid()) return;
-            keys.add(date.format('YYYY-MM-DD'));
+            if (workout.status === 'cancelled' && workout.attendance !== 'missed') {
+                return;
+            }
+
+            const dateKey = getWorkoutDateKey(workout);
+            if (!dateKey) return;
+
+            const state = map.get(dateKey) ?? {
+                planned: false,
+                inProgress: false,
+                completed: false,
+                missed: false,
+                hasSolo: false,
+                trainerColors: new Set<string>(),
+            };
+
+            if (workout.attendance === 'missed') state.missed = true;
+            else if (workout.status === 'planned') state.planned = true;
+            else if (workout.status === 'in_progress') state.inProgress = true;
+            else if (workout.status === 'completed') state.completed = true;
+
+            if (workout.trainerId) {
+                const color = trainerColorById[workout.trainerId];
+                if (color) state.trainerColors.add(color);
+            } else {
+                state.hasSolo = true;
+            }
+
+            map.set(dateKey, state);
         });
-        return keys;
-    }, [workouts]);
+
+        return map;
+    }, [trainerColorById, workouts]);
+
+    const selected = useMemo(() => dayjs(selectedDate).startOf('day'), [selectedDate]);
 
     const weekDays = useMemo(() => {
         const today = dayjs();
-        const weekStart = getWeekStart(today, firstWeekday);
-        const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, { weekday: 'short' });
+        const weekStart = getWeekStart(selected, firstWeekday);
+        const weekdayFormatter = new Intl.DateTimeFormat(i18n.language, {
+            weekday: 'short',
+        });
         const todayKey = today.format('YYYY-MM-DD');
 
         return Array.from({ length: 7 }, (_, index) => {
             const date = weekStart.add(index, 'day');
             const dateKey = date.format('YYYY-MM-DD');
             const weekday = weekdayFormatter.format(date.toDate());
+            const state = workoutStateByDate.get(dateKey);
 
             return {
                 dateKey,
                 day: date.date(),
                 weekday,
                 isToday: dateKey === todayKey,
-                isWorkoutDay: workoutDayKeys.has(dateKey),
+                isSelected: dateKey === selectedDate,
+                state,
             };
         });
-    }, [firstWeekday, i18n.language, workoutDayKeys]);
+    }, [firstWeekday, i18n.language, selected, selectedDate, workoutStateByDate]);
 
-    const handleDayPress = useCallback(
-        (dateKey: string) => {
-            router.navigate({
-                pathname: '/day',
-                params: { date: dateKey },
-            } as any);
-        },
-        [router],
-    );
+    const weekStart = useMemo(() => getWeekStart(selected, firstWeekday), [firstWeekday, selected]);
+    const weekEnd = useMemo(() => weekStart.add(6, 'day'), [weekStart]);
+    const todayWeekStart = useMemo(() => getWeekStart(dayjs(), firstWeekday), [firstWeekday]);
+    const isCurrentWeek = weekStart.isSame(todayWeekStart, 'day');
+
+    const weekLabel = useMemo(() => {
+        const sameMonth = weekStart.month() === weekEnd.month();
+        const start = weekStart.locale(i18n.language);
+        const end = weekEnd.locale(i18n.language);
+
+        if (sameMonth) {
+            return `${start.date()}–${end.date()} ${end.format('MMMM')}`;
+        }
+
+        return `${start.format('D MMM')} – ${end.format('D MMM')}`;
+    }, [i18n.language, weekEnd, weekStart]);
+
+    const moveWeek = (direction: -1 | 1) => {
+        onSelectDate(selected.add(direction * 7, 'day').format('YYYY-MM-DD'));
+    };
 
     return (
         <Box style={styles.wrapper}>
             <VStack style={styles.container}>
+                <HStack style={styles.navRow}>
+                    <Text style={styles.navTitle}>{weekLabel}</Text>
+
+                    <HStack style={styles.navActions}>
+                        <Pressable style={styles.navButton} onPress={() => moveWeek(-1)}>
+                            <ChevronLeft size={theme.space(5)} color={theme.colors.typography} />
+                        </Pressable>
+
+                        {!isCurrentWeek && (
+                            <Pressable
+                                style={styles.todayButton}
+                                onPress={() => onSelectDate(dayjs().format('YYYY-MM-DD'))}
+                            >
+                                <Text style={styles.todayText}>Сегодня</Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable style={styles.navButton} onPress={() => moveWeek(1)}>
+                            <ChevronRight size={theme.space(5)} color={theme.colors.typography} />
+                        </Pressable>
+                    </HStack>
+                </HStack>
+
                 <HStack style={styles.weekdaysRow}>
                     {weekDays.map((item) => (
                         <Box key={`weekday-${item.dateKey}`} style={styles.weekdayCell}>
@@ -152,33 +295,70 @@ export const WeekStats: FC<WeekStatsProps> = ({ workouts, firstWeekday }) => {
                         </Box>
                     ))}
                 </HStack>
+
                 <HStack style={styles.daysRow}>
-                    {weekDays.map((item) => (
-                        <Box key={item.dateKey} style={styles.dayCell}>
-                            <Pressable
-                                onPress={() => handleDayPress(item.dateKey)}
-                                disabled={!item.isWorkoutDay}
-                            >
-                                <Box
-                                    style={[
-                                        styles.dayCircle,
-                                        item.isWorkoutDay && styles.dayCircleCompleted,
-                                        item.isToday && styles.dayCircleToday,
-                                    ]}
-                                >
-                                    <Text
+                    {weekDays.map((item) => {
+                        const state = item.state;
+                        const hasPlanned = Boolean(state?.planned || state?.inProgress);
+                        const onlyCompleted = Boolean(
+                            state?.completed && !hasPlanned && !state.missed,
+                        );
+
+                        const indicators: string[] = [];
+                        if (state?.hasSolo) indicators.push('solo');
+                        if (state?.trainerColors) {
+                            indicators.push(...Array.from(state.trainerColors));
+                        }
+                        if (state?.missed) indicators.push('missed');
+
+                        return (
+                            <Box key={item.dateKey} style={styles.dayCell}>
+                                <Pressable onPress={() => onSelectDate(item.dateKey)}>
+                                    <Box
                                         style={[
-                                            styles.dayText,
-                                            item.isWorkoutDay && styles.dayTextCompleted,
-                                            item.isToday && styles.dayTextToday,
+                                            styles.dayCircle,
+                                            hasPlanned && styles.dayCirclePlanned,
+                                            onlyCompleted && styles.dayCircleCompleted,
+                                            item.isToday && styles.dayCircleToday,
+                                            item.isSelected && styles.dayCircleSelected,
                                         ]}
                                     >
-                                        {item.day}
-                                    </Text>
-                                </Box>
-                            </Pressable>
-                        </Box>
-                    ))}
+                                        <Text
+                                            style={[
+                                                styles.dayText,
+                                                onlyCompleted && styles.dayTextCompleted,
+                                                item.isSelected && styles.dayTextSelected,
+                                            ]}
+                                        >
+                                            {item.day}
+                                        </Text>
+
+                                        {indicators.length > 0 && (
+                                            <HStack style={styles.indicators}>
+                                                {indicators.slice(0, 3).map((indicator, index) => {
+                                                    const color =
+                                                        indicator === 'solo'
+                                                            ? onlyCompleted
+                                                                ? theme.colors.neutral[950]
+                                                                : theme.colors.lime[400]
+                                                            : indicator === 'missed'
+                                                              ? theme.colors.red[500]
+                                                              : indicator;
+
+                                                    return (
+                                                        <Box
+                                                            key={`${indicator}-${index}`}
+                                                            style={styles.indicator(color)}
+                                                        />
+                                                    );
+                                                })}
+                                            </HStack>
+                                        )}
+                                    </Box>
+                                </Pressable>
+                            </Box>
+                        );
+                    })}
                 </HStack>
             </VStack>
         </Box>
